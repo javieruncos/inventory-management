@@ -45,3 +45,13 @@ export async function createProduct(input: unknown): Promise<Product> {
     throw normalizeError(error);
   }
 }
+
+export async function listProducts(): Promise<Product[]> {
+  try {
+    await connectDB();
+
+    return await ProductModel.find({ deletedAt: null }).sort({ createdAt: -1 });
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
