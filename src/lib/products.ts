@@ -13,7 +13,10 @@ const updateProductSchema = createProductSchema
   );
 
 async function assertCategoryExists(categoryId: string): Promise<void> {
-  const category = await CategoryModel.exists({ _id: categoryId });
+  const category = await CategoryModel.exists({
+    _id: categoryId,
+    deletedAt: null,
+  });
   if (!category) {
     throw new AppError({
       kind: "NOT_FOUND",

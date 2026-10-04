@@ -4,6 +4,7 @@ export interface Category {
   _id: Types.ObjectId;
   name: string;
   description?: string;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +18,7 @@ const categorySchema = new Schema<Category>(
       unique: true,
     },
     description: { type: String, trim: true },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
