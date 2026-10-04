@@ -73,6 +73,13 @@ export async function listProducts(): Promise<Product[]> {
 
 export async function getProduct(id: string): Promise<Product> {
   try {
+    if (typeof id !== "string") {
+      throw new AppError({
+        kind: "VALIDATION",
+        message: "El ID debe ser una cadena de texto",
+      });
+    }
+
     await connectDB();
 
     const product = await ProductModel.findOne({
@@ -98,6 +105,13 @@ export async function updateProduct(
   input: unknown,
 ): Promise<Product> {
   try {
+    if (typeof id !== "string") {
+      throw new AppError({
+        kind: "VALIDATION",
+        message: "El ID debe ser una cadena de texto",
+      });
+    }
+
     const data = updateProductSchema.parse(input);
 
     await connectDB();
