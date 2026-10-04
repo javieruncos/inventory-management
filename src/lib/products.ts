@@ -55,3 +55,25 @@ export async function listProducts(): Promise<Product[]> {
     throw normalizeError(error);
   }
 }
+
+export async function getProduct(id: string): Promise<Product> {
+  try {
+    await connectDB();
+
+    const product = await ProductModel.findOne({
+      _id: id,
+      deletedAt: null,
+    });
+
+    if (!product) {
+      throw new AppError({
+        kind: "NOT_FOUND",
+        message: "El producto no existe",
+      });
+    }
+
+    return product;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
