@@ -153,3 +153,33 @@ export async function updateProduct(
     throw normalizeError(error);
   }
 }
+
+export async function deleteProduct(id: string): Promise<Product> {
+  try {
+    if (typeof id !== "string") {
+      throw new AppError({
+        kind: "VALIDATION",
+        message: "El ID debe ser una cadena de texto",
+      });
+    }
+
+    await connectDB();
+
+    const product = await ProductModel.findOneAndUpdate(
+      { _id: id, deletedAt: null },
+      { deletedAt: new Date() },
+      { new: true },
+    );
+
+    if (!product) {
+      throw new AppError({
+        kind: "NOT_FOUND",
+        message: "El producto no existe",
+      });
+    }
+
+    return product;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
