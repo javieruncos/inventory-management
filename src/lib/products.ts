@@ -27,7 +27,10 @@ async function assertCategoryExists(categoryId: string): Promise<void> {
 }
 
 async function assertSupplierExists(supplierId: string): Promise<void> {
-  const supplier = await SupplierModel.exists({ _id: supplierId });
+  const supplier = await SupplierModel.exists({
+    _id: supplierId,
+    deletedAt: null,
+  });
   if (!supplier) {
     throw new AppError({
       kind: "NOT_FOUND",
