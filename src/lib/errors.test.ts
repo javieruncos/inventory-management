@@ -82,4 +82,37 @@ describe("normalizeError", () => {
     ]);
     expect(result.cause).toBe(thrown);
   });
+
+  it("convierte un mongoose.CastError en AppError kind VALIDATION", () => {
+    let thrown: unknown;
+
+    try {
+      ProductModel.findOne({ _id: "no-es-un-id" }).cast(ProductModel);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(mongoose.Error.CastError);
+
+    const result = normalizeError(thrown);
+
+    expect(result).toBeInstanceOf(AppError);
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.message).toBe("Valor con formato inválido");
+    expect(result.issues).toEqual([
+      { path: "_id", message: "El valor de _id no es válido" },
+    ]);
+    expect(result.cause).toBe(thrown);
+  });
+
+  it("convierte un error desconocido en AppError kind INTERNAL", () => {
+    const unknownError = new Error("Algo inesperado ocurrió");
+
+    const result = normalizeError(unknownError);
+
+    expect(result).toBeInstanceOf(AppError);
+    expect(result.kind).toBe("INTERNAL");
+    expect(result.message).toBe("Error interno del servidor");
+    expect(result.cause).toBe(unknownError);
+  });
 });
