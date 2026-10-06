@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { Types } from "mongoose";
 import { AppError } from "@/lib/errors";
 import { createProduct } from "@/lib/products";
 import CategoryModel from "@/db/models/Category";
@@ -221,7 +223,7 @@ describe("createProduct", () => {
   it("crea un producto con currentStock inicial en 0", async () => {
     const categorySpy = vi
       .spyOn(CategoryModel, "exists")
-      .mockResolvedValue({ _id: "507f1f77bcf86cd799439011" });
+      .mockResolvedValue({ _id: new Types.ObjectId("507f1f77bcf86cd799439011") });
     const created = {
       _id: "64b000000000000000000001",
       name: "Producto de prueba",
@@ -234,9 +236,10 @@ describe("createProduct", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as unknown as Product;
-    const createSpy = vi
-      .spyOn(ProductModel, "create")
-      .mockResolvedValue(created);
+    const createSpy = vi.spyOn(ProductModel, "create") as unknown as MockInstance<
+      (doc: Partial<Product>) => Promise<Product>
+    >;
+    createSpy.mockResolvedValue(created);
 
     const result = await createProduct({
       name: "Producto de prueba",
@@ -265,7 +268,7 @@ describe("createProduct", () => {
   it("rechaza un proveedor inexistente con NOT_FOUND", async () => {
     const categorySpy = vi
       .spyOn(CategoryModel, "exists")
-      .mockResolvedValue({ _id: "507f1f77bcf86cd799439011" });
+      .mockResolvedValue({ _id: new Types.ObjectId("507f1f77bcf86cd799439011") });
     const supplierSpy = vi
       .spyOn(SupplierModel, "exists")
       .mockResolvedValue(null);
