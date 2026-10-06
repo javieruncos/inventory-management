@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 import { createProduct } from "@/lib/products";
 import CategoryModel from "@/db/models/Category";
+import SupplierModel from "@/db/models/Supplier";
+import ProductModel, { type Product } from "@/db/models/Product";
 
 vi.mock("@/db/connection", () => ({
   connectDB: vi.fn().mockResolvedValue(undefined),
@@ -214,5 +216,121 @@ describe("createProduct", () => {
     });
 
     existsSpy.mockRestore();
+  });
+
+  it("crea un producto con currentStock inicial en 0", async () => {
+    const categorySpy = vi
+      .spyOn(CategoryModel, "exists")
+      .mockResolvedValue({ _id: "507f1f77bcf86cd799439011" });
+    const created = {
+      _id: "64b000000000000000000001",
+      name: "Producto de prueba",
+      sku: "SKU-TEST-8",
+      price: 100,
+      currentStock: 0,
+      minimumStock: 0,
+      categoryId: "507f1f77bcf86cd799439011",
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as Product;
+    const createSpy = vi
+      .spyOn(ProductModel, "create")
+      .mockResolvedValue(created);
+
+    const result = await createProduct({
+      name: "Producto de prueba",
+      sku: "SKU-TEST-8",
+      price: 100,
+      categoryId: "507f1f77bcf86cd799439011",
+      supplierId: "",
+    });
+
+    expect(result).toBe(created);
+    expect(createSpy).toHaveBeenCalledWith({
+      name: "Producto de prueba",
+      sku: "SKU-TEST-8",
+      description: undefined,
+      price: 100,
+      minimumStock: undefined,
+      categoryId: "507f1f77bcf86cd799439011",
+      supplierId: undefined,
+      currentStock: 0,
+    });
+
+    categorySpy.mockRestore();
+    createSpy.mockRestore();
+  });
+
+  it("rechaza un proveedor inexistente con NOT_FOUND", async () => {
+    const categorySpy = vi
+      .spyOn(CategoryModel, "exists")
+      .mockResolvedValue({ _id: "507f1f77bcf86cd799439011" });
+    const supplierSpy = vi
+      .spyOn(SupplierModel, "exists")
+      .mockResolvedValue(null);
+
+    let thrown: unknown;
+
+    try {
+      await createProduct({
+        name: "Producto de prueba",
+        sku: "SKU-TEST-9",
+        price: 100,
+        categoryId: "507f1f77bcf86cd799439011",
+        supplierId: "507f1f77bcf86cd799439012",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("NOT_FOUND");
+    expect(result.message).toBe("El proveedor no existe");
+    expect(result.issues).toEqual([
+      {
+        path: "supplierId",
+        message: "El proveedor no existe",
+      },
+    ]);
+    expect(supplierSpy).toHaveBeenCalledWith({
+      _id: "507f1f77bcf86cd799439012",
+      deletedAt: null,
+    });
+
+    categorySpy.mockRestore();
+    supplierSpy.mockRestore();
+  });
+
+  it("rechaza un supplierId con formato inválido", async () => {
+    let thrown: unknown;
+
+    try {
+      await createProduct({
+        name: "Producto de prueba",
+        sku: "SKU-TEST-10",
+        price: 100,
+        categoryId: "507f1f77bcf86cd799439011",
+        supplierId: "no-es-un-oid",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.message).toBe("Datos inválidos");
+    expect(result.issues).toEqual([
+      {
+        path: "supplierId",
+        message: "Debe ser un ObjectId válido (24 caracteres hexadecimales)",
+      },
+    ]);
   });
 });
