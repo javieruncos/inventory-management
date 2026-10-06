@@ -144,4 +144,32 @@ describe("createProduct", () => {
       },
     ]);
   });
+
+  it("rechaza un sku vacío", async () => {
+    let thrown: unknown;
+
+    try {
+      await createProduct({
+        name: "Producto de prueba",
+        sku: "",
+        price: 100,
+        categoryId: "507f1f77bcf86cd799439011",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.message).toBe("Datos inválidos");
+    expect(result.issues).toEqual([
+      {
+        path: "sku",
+        message: "El SKU es obligatorio",
+      },
+    ]);
+  });
 });
