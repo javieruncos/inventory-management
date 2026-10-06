@@ -87,4 +87,61 @@ describe("createProduct", () => {
       },
     ]);
   });
+
+  it("rechaza un categoryId con formato inválido", async () => {
+    let thrown: unknown;
+
+    try {
+      await createProduct({
+        name: "Producto de prueba",
+        sku: "SKU-TEST-4",
+        price: 100,
+        categoryId: "no-es-un-objectid",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.message).toBe("Datos inválidos");
+    expect(result.issues).toEqual([
+      {
+        path: "categoryId",
+        message: "Debe ser un ObjectId válido (24 caracteres hexadecimales)",
+      },
+    ]);
+  });
+
+  it("rechaza un minimumStock no entero", async () => {
+    let thrown: unknown;
+
+    try {
+      await createProduct({
+        name: "Producto de prueba",
+        sku: "SKU-TEST-5",
+        price: 100,
+        categoryId: "507f1f77bcf86cd799439011",
+        minimumStock: 1.5,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.message).toBe("Datos inválidos");
+    expect(result.issues).toEqual([
+      {
+        path: "minimumStock",
+        message: "minimumStock debe ser un número entero",
+      },
+    ]);
+  });
 });
