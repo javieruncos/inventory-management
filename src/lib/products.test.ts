@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 import { createProduct } from "@/lib/products";
+import CategoryModel from "@/db/models/Category";
+
+vi.mock("@/db/connection", () => ({
+  connectDB: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe("createProduct", () => {
   it("rechaza currentStock como campo no permitido", async () => {
@@ -171,5 +176,43 @@ describe("createProduct", () => {
         message: "El SKU es obligatorio",
       },
     ]);
+  });
+
+  it("rechaza una categoría inexistente con NOT_FOUND", async () => {
+    const existsSpy = vi
+      .spyOn(CategoryModel, "exists")
+      .mockResolvedValue(null);
+
+    let thrown: unknown;
+
+    try {
+      await createProduct({
+        name: "Producto de prueba",
+        sku: "SKU-TEST-7",
+        price: 100,
+        categoryId: "507f1f77bcf86cd799439011",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("NOT_FOUND");
+    expect(result.message).toBe("La categoría no existe");
+    expect(result.issues).toEqual([
+      {
+        path: "categoryId",
+        message: "La categoría no existe",
+      },
+    ]);
+    expect(existsSpy).toHaveBeenCalledWith({
+      _id: "507f1f77bcf86cd799439011",
+      deletedAt: null,
+    });
+
+    existsSpy.mockRestore();
   });
 });
