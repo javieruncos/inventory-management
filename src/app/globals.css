@@ -35,21 +35,23 @@
   --color-text-muted: #94a3b8;
   --color-secondary-btn-text: #334155;
 
-  /* --- Colors: estados de inventario (DESIGN.md §5.2) --- */
+  /* --- Colors: estados de inventario (DESIGN.md §5.2) ---
+   * Fondos y dots = §5.2 sin cambios. Textos oscurecidos un paso dentro de la
+   * misma familia de tono para cumplir contraste WCAG AA >= 4.5:1 (DESIGN §20). */
   --color-status-in-bg: #ecfdf5;
-  --color-status-in-text: #059669;
+  --color-status-in-text: #047857;
   --color-status-in-dot: #10b981;
 
   --color-status-low-bg: #fffbeb;
-  --color-status-low-text: #d97706;
+  --color-status-low-text: #b45309;
   --color-status-low-dot: #f59e0b;
 
   --color-status-out-bg: #fef2f2;
-  --color-status-out-text: #dc2626;
+  --color-status-out-text: #b91c1c;
   --color-status-out-dot: #ef4444;
 
   --color-status-archived-bg: #f1f5f9;
-  --color-status-archived-text: #64748b;
+  --color-status-archived-text: #475569;
   --color-status-archived-dot: #94a3b8;
 
   /* --- Radii (DESIGN.md §7) --- */
