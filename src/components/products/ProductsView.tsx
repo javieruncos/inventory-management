@@ -1,0 +1,141 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { ProductsList } from "@/components/products/ProductsList";
+import { ProductsSkeleton } from "@/components/products/ProductsSkeleton";
+import { Button } from "@/components/ui/Button";
+import { FormField } from "@/components/ui/FormField";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ApiError } from "@/lib/api";
+import { cn } from "@/lib/cn";
+import { getStockStatus, type StockStatus } from "@/lib/dashboard";
+import { toViewStatus, useProducts } from "@/lib/queries";
+
+type StatusFilter = "ALL" | StockStatus;
+
+const FILTERS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
+  { value: "ALL", label: "Todos" },
+  { value: "normal", label: "En stock" },
+  { value: "lowStock", label: "Stock bajo" },
+  { value: "outOfStock", label: "Agotado" },
+];
+
+export function ProductsView() {
+  const productsQuery = useProducts();
+  const status = toViewStatus(productsQuery);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<StatusFilter>("ALL");
+
+  const products = productsQuery.data ?? [];
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filtered = products.filter((product) => {
+    const matchesFilter =
+      filter === "ALL" || getStockStatus(product) === filter;
+    const matchesSearch =
+      normalizedSearch === "" ||
+      product.name.toLowerCase().includes(normalizedSearch) ||
+      product.sku.toLowerCase().includes(normalizedSearch);
+    return matchesFilter && matchesSearch;
+  });
+
+  const retry = () => {
+    void productsQuery.refetch();
+  };
+
+  let body: ReactNode;
+
+  if (status === "loading") {
+    body = <ProductsSkeleton />;
+  } else if (status === "error") {
+    body = (
+      <div
+        role="alert"
+        className="flex flex-col items-start gap-3 rounded-card border border-border bg-surface p-5 shadow-card"
+      >
+        <p className="text-body text-text-secondary">
+          {productsQuery.error instanceof ApiError
+            ? productsQuery.error.message
+            : "No se pudieron cargar los productos."}
+        </p>
+        <Button variant="secondary" onClick={retry}>
+          Reintentar
+        </Button>
+      </div>
+    );
+  } else if (products.length === 0) {
+    body = (
+      <p className="text-body text-text-secondary">
+        No hay productos registrados.
+      </p>
+    );
+  } else {
+    body = (
+      <>
+        <div className="flex flex-col gap-3 desktop:flex-row desktop:items-end desktop:justify-between">
+          <div className="w-full desktop:w-72">
+            <FormField
+              id="products-search"
+              label="Buscar"
+              inputProps={{
+                type: "search",
+                placeholder: "Buscar por nombre o SKU",
+                value: search,
+                onChange: (event) => setSearch(event.target.value),
+              }}
+            />
+          </div>
+          <div
+            role="group"
+            aria-label="Filtrar por estado de stock"
+            className="flex flex-wrap items-center gap-2"
+          >
+            {FILTERS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={filter === option.value}
+                onClick={() => setFilter(option.value)}
+                className={cn(
+                  "h-8 rounded-pill px-3 text-label",
+                  "transition-colors duration-150 ease-emphasized",
+                  filter === option.value
+                    ? "bg-primary-soft text-primary"
+                    : "text-neutral hover:bg-surface-nested",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="text-body text-text-secondary">
+            {normalizedSearch !== ""
+              ? "No hay productos que coincidan con la búsqueda."
+              : "No hay productos con ese estado de stock."}
+          </p>
+        ) : (
+          <ProductsList products={filtered} totalProducts={products.length} />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Products"
+        subtitle="Catálogo de productos del inventario."
+      />
+      <section
+        aria-label="Listado de productos"
+        aria-busy={status === "loading"}
+        className="flex flex-col gap-4"
+      >
+        {body}
+      </section>
+    </div>
+  );
+}

@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getMovements, getProducts } from "@/lib/api";
+import {
+  createProduct,
+  deleteProduct,
+  getCategories,
+  getMovements,
+  getProducts,
+  getSuppliers,
+  updateProduct,
+} from "@/lib/api";
 
 const fetchMock = vi.fn<
   (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -26,6 +34,35 @@ const MOVEMENT = {
   reason: "Compra inicial",
   createdAt: "2026-01-01T10:00:00.000Z",
 };
+
+const CATEGORY = {
+  _id: "507f1f77bcf86cd799439021",
+  name: "Tecnología",
+  description: "Electrónica y más",
+  deletedAt: null,
+  createdAt: "2026-01-01T10:00:00.000Z",
+  updatedAt: "2026-01-01T10:00:00.000Z",
+};
+
+const SUPPLIER = {
+  _id: "507f1f77bcf86cd799439022",
+  name: "Acme",
+  email: "contacto@acme.com",
+  phone: "+54 11 5555-0000",
+  deletedAt: null,
+  createdAt: "2026-01-01T10:00:00.000Z",
+  updatedAt: "2026-01-01T10:00:00.000Z",
+};
+
+const CREATE_INPUT = {
+  name: "Nuevo Producto",
+  sku: "NEW-001",
+  price: 1000,
+  categoryId: "507f1f77bcf86cd799439012",
+  supplierId: undefined,
+};
+
+const JSON_HEADERS = { "Content-Type": "application/json" };
 
 beforeEach(() => {
   fetchMock.mockReset();
@@ -165,6 +202,176 @@ describe("getMovements", () => {
       status: 400,
       message: "Datos inválidos",
       issues: [{ path: "quantity", message: "Valor inválido" }],
+    });
+  });
+});
+
+describe("createProduct", () => {
+  it("hace POST a /api/products con JSON y devuelve el producto creado", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ data: { ...PRODUCT, ...CREATE_INPUT } }, { status: 201 }),
+    );
+
+    const result = await createProduct(CREATE_INPUT);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/products", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(CREATE_INPUT),
+    });
+    expect(result).toEqual({ ...PRODUCT, ...CREATE_INPUT });
+  });
+
+  it("propaga el CONFLICT de SKU duplicado con issues del servidor", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "CONFLICT",
+            message: "El SKU ya existe",
+            issues: [{ path: "sku", message: "El SKU ya existe" }],
+          },
+        },
+        { status: 409 },
+      ),
+    );
+
+    await expect(createProduct(CREATE_INPUT)).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "CONFLICT",
+      status: 409,
+      message: "El SKU ya existe",
+      issues: [{ path: "sku", message: "El SKU ya existe" }],
+    });
+  });
+});
+
+describe("updateProduct", () => {
+  it("hace PUT a /api/products/:id con el body parcial", async () => {
+    const updated = { ...PRODUCT, price: 190000 };
+    fetchMock.mockResolvedValue(Response.json({ data: updated }));
+
+    const result = await updateProduct(PRODUCT._id, { price: 190000 });
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/products/${PRODUCT._id}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ price: 190000 }),
+    });
+    expect(result).toEqual(updated);
+  });
+
+  it("propaga la VALIDATION del servidor con issues por campo", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "VALIDATION",
+            message: "Datos inválidos",
+            issues: [
+              { path: "price", message: "El precio no puede ser negativo" },
+            ],
+          },
+        },
+        { status: 400 },
+      ),
+    );
+
+    await expect(
+      updateProduct(PRODUCT._id, { price: -1 }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "VALIDATION",
+      status: 400,
+      message: "Datos inválidos",
+      issues: [{ path: "price", message: "El precio no puede ser negativo" }],
+    });
+  });
+});
+
+describe("deleteProduct", () => {
+  it("hace DELETE a /api/products/:id y devuelve el producto archivado", async () => {
+    const archived = {
+      ...PRODUCT,
+      deletedAt: "2026-02-01T10:00:00.000Z",
+    };
+    fetchMock.mockResolvedValue(Response.json({ data: archived }));
+
+    const result = await deleteProduct(PRODUCT._id);
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/products/${PRODUCT._id}`, {
+      method: "DELETE",
+    });
+    expect(result).toEqual(archived);
+  });
+
+  it("propaga el NOT_FOUND cuando el producto no existe", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: { kind: "NOT_FOUND", message: "El producto no existe" } },
+        { status: 404 },
+      ),
+    );
+
+    await expect(deleteProduct(PRODUCT._id)).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "NOT_FOUND",
+      status: 404,
+      message: "El producto no existe",
+    });
+  });
+});
+
+describe("getCategories", () => {
+  it("solicita /api/categories y devuelve la lista validada", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [CATEGORY] }));
+
+    const result = await getCategories();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/categories", undefined);
+    expect(result).toEqual([CATEGORY]);
+  });
+
+  it("pasa el AbortSignal a fetch para cancelación", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [] }));
+    const controller = new AbortController();
+
+    await getCategories(controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/categories", {
+      signal: controller.signal,
+    });
+  });
+
+  it("rechaza data que no valida contra el esquema de categorías", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [{ foo: "bar" }] }));
+
+    await expect(getCategories()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 200,
+      message: "Respuesta inesperada del servidor",
+    });
+  });
+});
+
+describe("getSuppliers", () => {
+  it("solicita /api/suppliers y devuelve la lista validada", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [SUPPLIER] }));
+
+    const result = await getSuppliers();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/suppliers", undefined);
+    expect(result).toEqual([SUPPLIER]);
+  });
+
+  it("pasa el AbortSignal a fetch para cancelación", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [] }));
+    const controller = new AbortController();
+
+    await getSuppliers(controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/suppliers", {
+      signal: controller.signal,
     });
   });
 });

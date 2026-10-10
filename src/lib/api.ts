@@ -1,7 +1,12 @@
 import { z } from "zod";
 import type { AppErrorKind, FieldIssue } from "@/lib/errors";
+import type { CreateProductInput } from "@/schemas/product";
+import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
+import type { SupplierDTO } from "@/types/supplier";
+
+export type UpdateProductInput = Partial<CreateProductInput>;
 
 export class ApiError extends Error {
   readonly kind: AppErrorKind;
@@ -54,8 +59,31 @@ const stockMovementSchema: z.ZodType<StockMovementDTO> = z.object({
   __v: z.number().optional(),
 });
 
+const categorySchema: z.ZodType<CategoryDTO> = z.object({
+  _id: z.string().regex(OBJECT_ID_PATTERN),
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  deletedAt: z.string().nullable(),
+  createdAt: isoDate,
+  updatedAt: isoDate,
+  __v: z.number().optional(),
+});
+
+const supplierSchema: z.ZodType<SupplierDTO> = z.object({
+  _id: z.string().regex(OBJECT_ID_PATTERN),
+  name: z.string().min(1),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  deletedAt: z.string().nullable(),
+  createdAt: isoDate,
+  updatedAt: isoDate,
+  __v: z.number().optional(),
+});
+
 const productListSchema = z.array(productSchema);
 const movementListSchema = z.array(stockMovementSchema);
+const categoryListSchema = z.array(categorySchema);
+const supplierListSchema = z.array(supplierSchema);
 
 const errorEnvelopeSchema = z.object({
   error: z.object({
@@ -149,4 +177,51 @@ export async function getMovements(
     movementListSchema,
     signal ? { signal } : undefined,
   );
+}
+
+export async function getCategories(
+  signal?: AbortSignal,
+): Promise<CategoryDTO[]> {
+  return fetchJson(
+    "/api/categories",
+    categoryListSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export async function getSuppliers(
+  signal?: AbortSignal,
+): Promise<SupplierDTO[]> {
+  return fetchJson(
+    "/api/suppliers",
+    supplierListSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export async function createProduct(
+  input: CreateProductInput,
+): Promise<ProductDTO> {
+  return fetchJson("/api/products", productSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateProduct(
+  id: string,
+  input: UpdateProductInput,
+): Promise<ProductDTO> {
+  return fetchJson(`/api/products/${id}`, productSchema, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteProduct(id: string): Promise<ProductDTO> {
+  return fetchJson(`/api/products/${id}`, productSchema, {
+    method: "DELETE",
+  });
 }
