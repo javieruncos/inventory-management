@@ -1,5 +1,5 @@
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Dashboard } from "@/components/dashboard/Dashboard";
 
 export default function Home() {
-  return <PageHeader title="Inventory Management" />;
+  return <Dashboard />;
 }
