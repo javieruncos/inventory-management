@@ -1,5 +1,7 @@
 import type { ProductDTO } from "@/types/product";
+import { Pencil } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { getStockStatus } from "@/lib/dashboard";
 
@@ -8,6 +10,8 @@ const numberFormat = new Intl.NumberFormat("es");
 type ProductsListProps = {
   products: ProductDTO[];
   totalProducts: number;
+  /** Abre el diálogo de edición; el segundo argumento es el botón disparador (para restaurar el foco al cerrar). */
+  onEdit: (product: ProductDTO, trigger: HTMLElement) => void;
 };
 
 type StockBadge = {
@@ -32,7 +36,11 @@ function countLabel(shown: number, total: number): string {
   return `${shown} de ${total} productos`;
 }
 
-export function ProductsList({ products, totalProducts }: ProductsListProps) {
+export function ProductsList({
+  products,
+  totalProducts,
+  onEdit,
+}: ProductsListProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="hidden desktop:block">
@@ -54,8 +62,11 @@ export function ProductsList({ products, totalProducts }: ProductsListProps) {
               <th scope="col" className="px-4 py-3 text-right">
                 Mínimo
               </th>
-              <th scope="col" className="py-3 pl-4 pr-0 text-right">
+              <th scope="col" className="py-3 px-4 text-right">
                 Estado
+              </th>
+              <th scope="col" className="py-3 pl-4 pr-0 text-right">
+                Acciones
               </th>
             </tr>
           </thead>
@@ -85,8 +96,17 @@ export function ProductsList({ products, totalProducts }: ProductsListProps) {
                   <td className="px-4 py-3 text-right tabular-nums text-text-secondary">
                     {product.minimumStock}
                   </td>
-                  <td className="py-3 pl-4 pr-0 text-right align-middle">
+                  <td className="py-3 px-4 text-right align-middle">
                     <StatusBadge variant={badge.variant} label={badge.label} />
+                  </td>
+                  <td className="py-3 pl-4 pr-0 text-right align-middle">
+                    <IconButton
+                      label={`Editar ${product.name}`}
+                      icon={<Pencil size={16} />}
+                      onClick={(event) =>
+                        onEdit(product, event.currentTarget)
+                      }
+                    />
                   </td>
                 </tr>
               );
@@ -111,7 +131,19 @@ export function ProductsList({ products, totalProducts }: ProductsListProps) {
                       {product.sku}
                     </p>
                   </div>
-                  <StatusBadge variant={badge.variant} label={badge.label} />
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusBadge
+                      variant={badge.variant}
+                      label={badge.label}
+                    />
+                    <IconButton
+                      label={`Editar ${product.name}`}
+                      icon={<Pencil size={16} />}
+                      onClick={(event) =>
+                        onEdit(product, event.currentTarget)
+                      }
+                    />
+                  </div>
                 </div>
                 <dl className="mt-3 grid grid-cols-3 gap-2 rounded-nested bg-surface-nested p-3">
                   <div className="min-w-0">

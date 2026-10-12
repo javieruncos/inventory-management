@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
+import { Plus } from "lucide-react";
+import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { ProductsList } from "@/components/products/ProductsList";
 import { ProductsSkeleton } from "@/components/products/ProductsSkeleton";
 import { Button } from "@/components/ui/Button";
@@ -10,8 +18,14 @@ import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { getStockStatus, type StockStatus } from "@/lib/dashboard";
 import { toViewStatus, useProducts } from "@/lib/queries";
+import type { ProductDTO } from "@/types/product";
 
 type StatusFilter = "ALL" | StockStatus;
+
+type DialogState =
+  | { mode: "create" }
+  | { mode: "edit"; product: ProductDTO }
+  | null;
 
 const FILTERS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
   { value: "ALL", label: "Todos" },
@@ -25,6 +39,23 @@ export function ProductsView() {
   const status = toViewStatus(productsQuery);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("ALL");
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  const openCreate = (event: MouseEvent<HTMLButtonElement>) => {
+    triggerRef.current = event.currentTarget;
+    setDialog({ mode: "create" });
+  };
+
+  const openEdit = (product: ProductDTO, trigger: HTMLElement) => {
+    triggerRef.current = trigger;
+    setDialog({ mode: "edit", product });
+  };
+
+  const closeDialog = useCallback(() => {
+    setDialog(null);
+    triggerRef.current?.focus();
+  }, []);
 
   const products = productsQuery.data ?? [];
   const normalizedSearch = search.trim().toLowerCase();
@@ -117,25 +148,45 @@ export function ProductsView() {
               : "No hay productos con ese estado de stock."}
           </p>
         ) : (
-          <ProductsList products={filtered} totalProducts={products.length} />
+          <ProductsList
+            products={filtered}
+            totalProducts={products.length}
+            onEdit={openEdit}
+          />
         )}
       </>
     );
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <PageHeader
-        title="Products"
-        subtitle="Catálogo de productos del inventario."
-      />
-      <section
-        aria-label="Listado de productos"
-        aria-busy={status === "loading"}
-        className="flex flex-col gap-4"
-      >
-        {body}
-      </section>
-    </div>
+    <>
+      <div className="flex flex-col gap-5" inert={dialog !== null}>
+        <PageHeader
+          title="Products"
+          subtitle="Catálogo de productos del inventario."
+          actions={
+            <Button onClick={openCreate}>
+              <Plus aria-hidden="true" size={16} />
+              Nuevo producto
+            </Button>
+          }
+        />
+        <section
+          aria-label="Listado de productos"
+          aria-busy={status === "loading"}
+          className="flex flex-col gap-4"
+        >
+          {body}
+        </section>
+      </div>
+      {dialog ? (
+        <ProductFormDialog
+          key={dialog.mode === "edit" ? dialog.product._id : "create"}
+          mode={dialog.mode}
+          product={dialog.mode === "edit" ? dialog.product : null}
+          onClose={closeDialog}
+        />
+      ) : null}
+    </>
   );
 }
