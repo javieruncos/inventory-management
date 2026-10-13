@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AppErrorKind, FieldIssue } from "@/lib/errors";
 import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
+import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import type { CreateSupplierInput } from "@/schemas/supplier";
 import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
@@ -203,6 +204,16 @@ export async function getMovementsByProduct(
     movementListSchema,
     signal ? { signal } : undefined,
   );
+}
+
+export async function createMovement(
+  input: CreateStockMovementInput,
+): Promise<StockMovementDTO> {
+  return fetchJson("/api/stock", stockMovementSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getCategories(

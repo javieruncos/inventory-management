@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createCategory,
+  createMovement,
   createProduct,
   createSupplier,
   deleteCategory,
@@ -482,6 +483,134 @@ describe("getMovementsByProduct", () => {
       status: 400,
       message: "El ID no es válido",
       issues: [{ path: "productId", message: "El ID no es válido" }],
+    });
+  });
+});
+
+describe("createMovement", () => {
+  it("hace POST a /api/stock con el body y devuelve el movimiento", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ data: MOVEMENT }, { status: 201 }),
+    );
+    const input = {
+      productId: MOVEMENT.productId,
+      type: "IN" as const,
+      quantity: 5,
+      reason: "Compra inicial",
+    };
+
+    const result = await createMovement(input);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/stock", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(input),
+    });
+    expect(result).toEqual(MOVEMENT);
+  });
+
+  it("propaga la VALIDATION del servidor con issues por campo", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "VALIDATION",
+            message: "Datos inválidos",
+            issues: [
+              { path: "quantity", message: "quantity debe ser mayor que 0" },
+            ],
+          },
+        },
+        { status: 400 },
+      ),
+    );
+
+    await expect(
+      createMovement({
+        productId: MOVEMENT.productId,
+        type: "OUT",
+        quantity: 0,
+        reason: "Ajuste",
+      }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "VALIDATION",
+      status: 400,
+      message: "Datos inválidos",
+      issues: [{ path: "quantity", message: "quantity debe ser mayor que 0" }],
+    });
+  });
+
+  it("propaga el CONFLICT cuando el stock es insuficiente", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "CONFLICT",
+            message: "El stock es insuficiente para realizar la salida",
+          },
+        },
+        { status: 409 },
+      ),
+    );
+
+    await expect(
+      createMovement({
+        productId: MOVEMENT.productId,
+        type: "OUT",
+        quantity: 99,
+        reason: "Ajuste",
+      }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "CONFLICT",
+      status: 409,
+      message: "El stock es insuficiente para realizar la salida",
+    });
+  });
+
+  it("propaga el NOT_FOUND cuando el producto no existe", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: { kind: "NOT_FOUND", message: "El producto no existe" } },
+        { status: 404 },
+      ),
+    );
+
+    await expect(
+      createMovement({
+        productId: MOVEMENT.productId,
+        type: "IN",
+        quantity: 1,
+        reason: "Ajuste",
+      }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "NOT_FOUND",
+      status: 404,
+      message: "El producto no existe",
+    });
+  });
+
+  it("rechaza una respuesta que no valida contra el esquema de movimiento", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { data: { ...MOVEMENT, _id: "no-es-un-id" } },
+        { status: 201 },
+      ),
+    );
+
+    await expect(
+      createMovement({
+        productId: MOVEMENT.productId,
+        type: "IN",
+        quantity: 1,
+        reason: "Ajuste",
+      }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 201,
+      message: "Respuesta inesperada del servidor",
     });
   });
 });

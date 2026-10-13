@@ -19,5 +19,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Products", href: "/products", icon: Package },
   { label: "Categories", href: "/categories", icon: FolderTree },
   { label: "Suppliers", href: "/suppliers", icon: Truck },
-  { label: "Stock Movements", href: null, icon: ArrowLeftRight },
+  { label: "Stock Movements", href: "/stock", icon: ArrowLeftRight },
 ];

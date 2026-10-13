@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import {
   createCategory,
+  createMovement,
   createProduct,
   createSupplier,
   deleteCategory,
@@ -26,7 +27,9 @@ import {
 } from "@/lib/api";
 import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
+import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import type { CreateSupplierInput } from "@/schemas/supplier";
+import type { StockMovementDTO } from "@/types/stockMovement";
 
 export const queryKeys = {
   products: {
@@ -273,4 +276,33 @@ export function useUpdateSupplier() {
 export function useDeleteSupplier() {
   const queryClient = useQueryClient();
   return useMutation(deleteSupplierMutationOptions(queryClient));
+}
+
+function invalidateStockData(
+  queryClient: QueryClient,
+  productId: string,
+): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.movements.list });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.movements.byProduct(productId),
+  });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.products.list });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.products.detail(productId),
+  });
+}
+
+export function createMovementMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (input: CreateStockMovementInput) => createMovement(input),
+    onSuccess: (
+      _data: StockMovementDTO,
+      variables: CreateStockMovementInput,
+    ) => invalidateStockData(queryClient, variables.productId),
+  };
+}
+
+export function useCreateMovement() {
+  const queryClient = useQueryClient();
+  return useMutation(createMovementMutationOptions(queryClient));
 }

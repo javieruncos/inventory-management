@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import {
   createCategory,
+  createMovement,
   createProduct,
   createSupplier,
   deleteCategory,
@@ -18,9 +19,11 @@ import {
   updateSupplier,
 } from "@/lib/api";
 import type { CreateProductInput } from "@/schemas/product";
+import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import {
   categoriesQueryOptions,
   createCategoryMutationOptions,
+  createMovementMutationOptions,
   createProductMutationOptions,
   createSupplierMutationOptions,
   deleteCategoryMutationOptions,
@@ -56,6 +59,7 @@ vi.mock("@/lib/api", () => ({
   createSupplier: vi.fn(),
   updateSupplier: vi.fn(),
   deleteSupplier: vi.fn(),
+  createMovement: vi.fn(),
 }));
 
 const PRODUCT = {
@@ -88,6 +92,15 @@ const SUPPLIER = {
   deletedAt: null,
   createdAt: "2026-01-01T10:00:00.000Z",
   updatedAt: "2026-01-01T10:00:00.000Z",
+};
+
+const MOVEMENT = {
+  _id: "507f1f77bcf86cd799439013",
+  productId: "507f1f77bcf86cd799439011",
+  type: "IN" as const,
+  quantity: 5,
+  reason: "Compra inicial",
+  createdAt: "2026-01-01T10:00:00.000Z",
 };
 
 const CREATE_INPUT: CreateProductInput = {
@@ -522,6 +535,79 @@ describe("deleteSupplierMutationOptions", () => {
     const options = deleteSupplierMutationOptions(client);
 
     await expect(options.mutationFn(SUPPLIER._id)).rejects.toBe(apiError);
+  });
+});
+
+describe("createMovementMutationOptions", () => {
+  const MOVEMENT_INPUT: CreateStockMovementInput = {
+    productId: PRODUCT._id,
+    type: "IN",
+    quantity: 5,
+    reason: "Compra inicial",
+  };
+
+  it("envía el input a createMovement y devuelve el movimiento", async () => {
+    const client = new QueryClient();
+    vi.mocked(createMovement).mockResolvedValue(MOVEMENT);
+    const options = createMovementMutationOptions(client);
+
+    await expect(options.mutationFn(MOVEMENT_INPUT)).resolves.toEqual(MOVEMENT);
+
+    expect(createMovement).toHaveBeenCalledWith(MOVEMENT_INPUT);
+  });
+
+  it("invalida el historial global y el del producto afectado", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createMovementMutationOptions(client).onSuccess(MOVEMENT, MOVEMENT_INPUT);
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(4);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.movements.list,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.movements.byProduct(PRODUCT._id),
+    });
+  });
+
+  it("invalida la lista de productos y el detalle del producto afectado", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createMovementMutationOptions(client).onSuccess(MOVEMENT, MOVEMENT_INPUT);
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.products.list,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.products.detail(PRODUCT._id),
+    });
+  });
+
+  it("cubre el dashboard invalidando sólo las claves que consume (products.list y movements.list)", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createMovementMutationOptions(client).onSuccess(MOVEMENT, MOVEMENT_INPUT);
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map(
+      ([filters]) => filters?.queryKey,
+    );
+
+    expect(invalidatedKeys).toContainEqual(queryKeys.products.list);
+    expect(invalidatedKeys).toContainEqual(queryKeys.movements.list);
+    expect(invalidatedKeys).not.toContainEqual(queryKeys.categories.all);
+    expect(invalidatedKeys).not.toContainEqual(queryKeys.suppliers.all);
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error("El stock es insuficiente para realizar la salida");
+    vi.mocked(createMovement).mockRejectedValue(apiError);
+    const options = createMovementMutationOptions(client);
+
+    await expect(options.mutationFn(MOVEMENT_INPUT)).rejects.toBe(apiError);
   });
 });
 
