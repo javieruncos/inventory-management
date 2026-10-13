@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import type { ProductDTO } from "@/types/product";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
@@ -77,9 +78,12 @@ export function LowStockCard({
                   className="flex items-center justify-between gap-3 py-3"
                 >
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-body font-medium text-text">
+                    <Link
+                      href={`/products/${product._id}`}
+                      className="truncate text-body font-medium text-text hover:text-primary"
+                    >
                       {product.name}
-                    </span>
+                    </Link>
                     <span className="truncate text-caption text-text-secondary">
                       {product.sku} · Punto de reorden: {product.minimumStock}
                     </span>
