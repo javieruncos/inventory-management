@@ -169,11 +169,33 @@ export async function getProducts(
   );
 }
 
+export async function getProduct(
+  id: string,
+  signal?: AbortSignal,
+): Promise<ProductDTO> {
+  return fetchJson(
+    `/api/products/${id}`,
+    productSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
 export async function getMovements(
   signal?: AbortSignal,
 ): Promise<StockMovementDTO[]> {
   return fetchJson(
     "/api/stock",
+    movementListSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export async function getMovementsByProduct(
+  productId: string,
+  signal?: AbortSignal,
+): Promise<StockMovementDTO[]> {
+  return fetchJson(
+    `/api/stock?productId=${encodeURIComponent(productId)}`,
     movementListSchema,
     signal ? { signal } : undefined,
   );

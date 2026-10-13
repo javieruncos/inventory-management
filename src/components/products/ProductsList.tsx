@@ -1,4 +1,5 @@
 import type { ProductDTO } from "@/types/product";
+import Link from "next/link";
 import { Pencil, Trash } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { IconButton } from "@/components/ui/IconButton";
@@ -83,9 +84,12 @@ export function ProductsList({
                   className="transition-colors hover:bg-surface-nested"
                 >
                   <td className="py-3 pl-0 pr-4 align-middle">
-                    <span className="block truncate font-medium text-text">
+                    <Link
+                      href={`/products/${product._id}`}
+                      className="block truncate font-medium text-text hover:text-primary"
+                    >
                       {product.name}
-                    </span>
+                    </Link>
                     <span className="block truncate text-caption text-text-secondary">
                       {product.sku}
                     </span>
@@ -137,7 +141,12 @@ export function ProductsList({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-body font-medium text-text">
-                      {product.name}
+                      <Link
+                        href={`/products/${product._id}`}
+                        className="hover:text-primary"
+                      >
+                        {product.name}
+                      </Link>
                     </p>
                     <p className="truncate text-caption text-text-secondary">
                       {product.sku}

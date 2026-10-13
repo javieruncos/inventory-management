@@ -5,6 +5,8 @@ import {
   deleteProduct,
   getCategories,
   getMovements,
+  getMovementsByProduct,
+  getProduct,
   getProducts,
   getSuppliers,
   updateProduct,
@@ -14,7 +16,10 @@ import {
   categoriesQueryOptions,
   createProductMutationOptions,
   deleteProductMutationOptions,
+  isValidObjectId,
   movementsQueryOptions,
+  productMovementsQueryOptions,
+  productQueryOptions,
   productsQueryOptions,
   queryClientDefaultOptions,
   queryKeys,
@@ -25,7 +30,9 @@ import {
 
 vi.mock("@/lib/api", () => ({
   getProducts: vi.fn(),
+  getProduct: vi.fn(),
   getMovements: vi.fn(),
+  getMovementsByProduct: vi.fn(),
   getCategories: vi.fn(),
   getSuppliers: vi.fn(),
   createProduct: vi.fn(),
@@ -80,6 +87,19 @@ describe("queryKeys", () => {
     ).toEqual(queryKeys.products.all);
     expect(
       queryKeys.movements.list.slice(0, queryKeys.movements.all.length),
+    ).toEqual(queryKeys.movements.all);
+  });
+
+  it("la clave de detalle y la de movimientos por producto viven bajo su dominio", () => {
+    expect(
+      queryKeys.products
+        .detail("507f1f77bcf86cd799439011")
+        .slice(0, queryKeys.products.all.length),
+    ).toEqual(queryKeys.products.all);
+    expect(
+      queryKeys.movements
+        .byProduct("507f1f77bcf86cd799439011")
+        .slice(0, queryKeys.movements.all.length),
     ).toEqual(queryKeys.movements.all);
   });
 
@@ -308,5 +328,82 @@ describe("deleteProductMutationOptions", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: queryKeys.products.all,
     });
+  });
+});
+
+describe("productQueryOptions", () => {
+  it("usa la clave de detalle del producto", () => {
+    expect(productQueryOptions(PRODUCT._id).queryKey).toEqual(
+      queryKeys.products.detail(PRODUCT._id),
+    );
+  });
+
+  it("delega el signal de TanStack Query en getProduct", async () => {
+    const options = productQueryOptions(PRODUCT._id);
+    const controller = new AbortController();
+    vi.mocked(getProduct).mockResolvedValue(PRODUCT);
+
+    await expect(
+      options.queryFn({ signal: controller.signal }),
+    ).resolves.toEqual(PRODUCT);
+
+    expect(getProduct).toHaveBeenCalledWith(PRODUCT._id, controller.signal);
+  });
+});
+
+describe("productMovementsQueryOptions", () => {
+  it("usa la clave de movimientos por producto", () => {
+    expect(productMovementsQueryOptions(PRODUCT._id).queryKey).toEqual(
+      queryKeys.movements.byProduct(PRODUCT._id),
+    );
+  });
+
+  it("delega el signal de TanStack Query en getMovementsByProduct", async () => {
+    const options = productMovementsQueryOptions(PRODUCT._id);
+    const controller = new AbortController();
+    vi.mocked(getMovementsByProduct).mockResolvedValue([]);
+
+    await expect(
+      options.queryFn({ signal: controller.signal }),
+    ).resolves.toEqual([]);
+
+    expect(getMovementsByProduct).toHaveBeenCalledWith(
+      PRODUCT._id,
+      controller.signal,
+    );
+  });
+});
+
+describe("isValidObjectId", () => {
+  it("acepta ids hexadecimales de 24 caracteres", () => {
+    expect(isValidObjectId("507f1f77bcf86cd799439011")).toBe(true);
+  });
+
+  it("rechaza ids con formato inválido", () => {
+    expect(isValidObjectId("")).toBe(false);
+    expect(isValidObjectId("nope")).toBe(false);
+    expect(isValidObjectId("507f1f77bcf86cd79943901z")).toBe(false);
+    expect(isValidObjectId("507f1f77bcf86cd79943901")).toBe(false);
+  });
+});
+
+describe("invalidación de la consulta de detalle", () => {
+  it("invalidar products.all marca como invalidada la key de detalle sin tocar movimientos", async () => {
+    const client = new QueryClient();
+    vi.mocked(getProduct).mockResolvedValue(PRODUCT);
+    vi.mocked(getMovements).mockResolvedValue([]);
+
+    await client.fetchQuery(productQueryOptions(PRODUCT._id));
+    await client.fetchQuery(movementsQueryOptions());
+
+    await client.invalidateQueries({ queryKey: queryKeys.products.all });
+
+    expect(
+      client.getQueryState(queryKeys.products.detail(PRODUCT._id))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(queryKeys.movements.list)?.isInvalidated,
+    ).toBe(false);
   });
 });

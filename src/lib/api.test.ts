@@ -4,6 +4,8 @@ import {
   deleteProduct,
   getCategories,
   getMovements,
+  getMovementsByProduct,
+  getProduct,
   getProducts,
   getSuppliers,
   updateProduct,
@@ -372,6 +374,108 @@ describe("getSuppliers", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/suppliers", {
       signal: controller.signal,
+    });
+  });
+});
+
+describe("getProduct", () => {
+  it("solicita /api/products/:id y devuelve el producto del envelope", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: PRODUCT }));
+
+    const result = await getProduct(PRODUCT._id);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/products/${PRODUCT._id}`,
+      undefined,
+    );
+    expect(result).toEqual(PRODUCT);
+  });
+
+  it("pasa el AbortSignal a fetch para cancelación", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: PRODUCT }));
+    const controller = new AbortController();
+
+    await getProduct(PRODUCT._id, controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/products/${PRODUCT._id}`, {
+      signal: controller.signal,
+    });
+  });
+
+  it("propaga el NOT_FOUND cuando el producto no existe o fue eliminado", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: { kind: "NOT_FOUND", message: "El producto no existe" } },
+        { status: 404 },
+      ),
+    );
+
+    await expect(getProduct(PRODUCT._id)).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "NOT_FOUND",
+      status: 404,
+      message: "El producto no existe",
+    });
+  });
+
+  it("rechaza una respuesta que no valida contra el esquema del producto", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ data: { ...PRODUCT, price: "caro" } }),
+    );
+
+    await expect(getProduct(PRODUCT._id)).rejects.toMatchObject({
+      name: "ApiError",
+      status: 200,
+      message: "Respuesta inesperada del servidor",
+    });
+  });
+});
+
+describe("getMovementsByProduct", () => {
+  it("solicita /api/stock con ?productId y devuelve la lista validada", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [MOVEMENT] }));
+
+    const result = await getMovementsByProduct(MOVEMENT.productId);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/stock?productId=${MOVEMENT.productId}`,
+      undefined,
+    );
+    expect(result).toEqual([MOVEMENT]);
+  });
+
+  it("pasa el AbortSignal a fetch para cancelación", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [] }));
+    const controller = new AbortController();
+
+    await getMovementsByProduct(MOVEMENT.productId, controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/stock?productId=${MOVEMENT.productId}`,
+      { signal: controller.signal },
+    );
+  });
+
+  it("propaga la VALIDATION del servidor cuando el productId es inválido", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "VALIDATION",
+            message: "El ID no es válido",
+            issues: [{ path: "productId", message: "El ID no es válido" }],
+          },
+        },
+        { status: 400 },
+      ),
+    );
+
+    await expect(getMovementsByProduct("nope")).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "VALIDATION",
+      status: 400,
+      message: "El ID no es válido",
+      issues: [{ path: "productId", message: "El ID no es válido" }],
     });
   });
 });

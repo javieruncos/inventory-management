@@ -9,6 +9,8 @@ import {
   deleteProduct,
   getCategories,
   getMovements,
+  getMovementsByProduct,
+  getProduct,
   getProducts,
   getSuppliers,
   updateProduct,
@@ -20,10 +22,12 @@ export const queryKeys = {
   products: {
     all: ["products"] as const,
     list: ["products", "list"] as const,
+    detail: (id: string) => ["products", "detail", id] as const,
   },
   movements: {
     all: ["movements"] as const,
     list: ["movements", "list"] as const,
+    byProduct: (id: string) => ["movements", "byProduct", id] as const,
   },
   categories: {
     all: ["categories"] as const,
@@ -86,6 +90,21 @@ export function suppliersQueryOptions() {
   };
 }
 
+export function productQueryOptions(id: string) {
+  return {
+    queryKey: queryKeys.products.detail(id),
+    queryFn: ({ signal }: { signal: AbortSignal }) => getProduct(id, signal),
+  };
+}
+
+export function productMovementsQueryOptions(id: string) {
+  return {
+    queryKey: queryKeys.movements.byProduct(id),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      getMovementsByProduct(id, signal),
+  };
+}
+
 export function useProducts() {
   return useQuery(productsQueryOptions());
 }
@@ -100,6 +119,27 @@ export function useCategories() {
 
 export function useSuppliers() {
   return useQuery(suppliersQueryOptions());
+}
+
+const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/;
+
+/** Valida un ObjectId de 24 hex antes de disparar queries de detalle. */
+export function isValidObjectId(id: string): boolean {
+  return OBJECT_ID_PATTERN.test(id);
+}
+
+export function useProduct(id: string) {
+  return useQuery({
+    ...productQueryOptions(id),
+    enabled: isValidObjectId(id),
+  });
+}
+
+export function useProductMovements(id: string) {
+  return useQuery({
+    ...productMovementsQueryOptions(id),
+    enabled: isValidObjectId(id),
+  });
 }
 
 function invalidateProducts(queryClient: QueryClient): void {
