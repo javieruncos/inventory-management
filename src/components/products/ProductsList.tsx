@@ -1,5 +1,5 @@
 import type { ProductDTO } from "@/types/product";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -12,6 +12,8 @@ type ProductsListProps = {
   totalProducts: number;
   /** Abre el diálogo de edición; el segundo argumento es el botón disparador (para restaurar el foco al cerrar). */
   onEdit: (product: ProductDTO, trigger: HTMLElement) => void;
+  /** Abre el diálogo de confirmación de eliminación; el segundo argumento es el botón disparador. */
+  onDelete: (product: ProductDTO, trigger: HTMLElement) => void;
 };
 
 type StockBadge = {
@@ -40,6 +42,7 @@ export function ProductsList({
   products,
   totalProducts,
   onEdit,
+  onDelete,
 }: ProductsListProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -100,13 +103,22 @@ export function ProductsList({
                     <StatusBadge variant={badge.variant} label={badge.label} />
                   </td>
                   <td className="py-3 pl-4 pr-0 text-right align-middle">
-                    <IconButton
-                      label={`Editar ${product.name}`}
-                      icon={<Pencil size={16} />}
-                      onClick={(event) =>
-                        onEdit(product, event.currentTarget)
-                      }
-                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <IconButton
+                        label={`Editar ${product.name}`}
+                        icon={<Pencil size={16} />}
+                        onClick={(event) =>
+                          onEdit(product, event.currentTarget)
+                        }
+                      />
+                      <IconButton
+                        label={`Eliminar ${product.name}`}
+                        icon={<Trash size={16} />}
+                        onClick={(event) =>
+                          onDelete(product, event.currentTarget)
+                        }
+                      />
+                    </div>
                   </td>
                 </tr>
               );
@@ -141,6 +153,13 @@ export function ProductsList({
                       icon={<Pencil size={16} />}
                       onClick={(event) =>
                         onEdit(product, event.currentTarget)
+                      }
+                    />
+                    <IconButton
+                      label={`Eliminar ${product.name}`}
+                      icon={<Trash size={16} />}
+                      onClick={(event) =>
+                        onDelete(product, event.currentTarget)
                       }
                     />
                   </div>
