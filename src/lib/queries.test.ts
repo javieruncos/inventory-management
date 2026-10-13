@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createCategory,
   createProduct,
+  createSupplier,
   deleteCategory,
   deleteProduct,
+  deleteSupplier,
   getCategories,
   getMovements,
   getMovementsByProduct,
@@ -13,14 +15,17 @@ import {
   getSuppliers,
   updateCategory,
   updateProduct,
+  updateSupplier,
 } from "@/lib/api";
 import type { CreateProductInput } from "@/schemas/product";
 import {
   categoriesQueryOptions,
   createCategoryMutationOptions,
   createProductMutationOptions,
+  createSupplierMutationOptions,
   deleteCategoryMutationOptions,
   deleteProductMutationOptions,
+  deleteSupplierMutationOptions,
   isValidObjectId,
   movementsQueryOptions,
   productMovementsQueryOptions,
@@ -32,6 +37,7 @@ import {
   toViewStatus,
   updateCategoryMutationOptions,
   updateProductMutationOptions,
+  updateSupplierMutationOptions,
 } from "@/lib/queries";
 
 vi.mock("@/lib/api", () => ({
@@ -47,6 +53,9 @@ vi.mock("@/lib/api", () => ({
   createCategory: vi.fn(),
   updateCategory: vi.fn(),
   deleteCategory: vi.fn(),
+  createSupplier: vi.fn(),
+  updateSupplier: vi.fn(),
+  deleteSupplier: vi.fn(),
 }));
 
 const PRODUCT = {
@@ -425,6 +434,94 @@ describe("deleteCategoryMutationOptions", () => {
     const options = deleteCategoryMutationOptions(client);
 
     await expect(options.mutationFn(CATEGORY._id)).rejects.toBe(apiError);
+  });
+});
+
+describe("createSupplierMutationOptions", () => {
+  it("envía el input a createSupplier y devuelve el proveedor", async () => {
+    const client = new QueryClient();
+    vi.mocked(createSupplier).mockResolvedValue(SUPPLIER);
+    const options = createSupplierMutationOptions(client);
+    const input = { name: "Acme", email: "contacto@acme.com" };
+
+    await expect(options.mutationFn(input)).resolves.toEqual(SUPPLIER);
+
+    expect(createSupplier).toHaveBeenCalledWith(input);
+  });
+
+  it("invalida la raíz de proveedores al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createSupplierMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.suppliers.all,
+    });
+  });
+});
+
+describe("updateSupplierMutationOptions", () => {
+  it("envía id e input a updateSupplier y devuelve el proveedor", async () => {
+    const client = new QueryClient();
+    const updated = { ...SUPPLIER, name: "Acme Internacional" };
+    vi.mocked(updateSupplier).mockResolvedValue(updated);
+    const options = updateSupplierMutationOptions(client);
+
+    await expect(
+      options.mutationFn({ id: SUPPLIER._id, input: { name: "Acme Internacional" } }),
+    ).resolves.toEqual(updated);
+
+    expect(updateSupplier).toHaveBeenCalledWith(SUPPLIER._id, {
+      name: "Acme Internacional",
+    });
+  });
+
+  it("invalida la raíz de proveedores al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    updateSupplierMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.suppliers.all,
+    });
+  });
+});
+
+describe("deleteSupplierMutationOptions", () => {
+  it("envía el id a deleteSupplier y devuelve el proveedor archivado", async () => {
+    const client = new QueryClient();
+    const archived = { ...SUPPLIER, deletedAt: "2026-02-01T10:00:00.000Z" };
+    vi.mocked(deleteSupplier).mockResolvedValue(archived);
+    const options = deleteSupplierMutationOptions(client);
+
+    await expect(options.mutationFn(SUPPLIER._id)).resolves.toEqual(archived);
+
+    expect(deleteSupplier).toHaveBeenCalledWith(SUPPLIER._id);
+  });
+
+  it("invalida la raíz de proveedores al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    deleteSupplierMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.suppliers.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error("El proveedor está en uso por productos");
+    vi.mocked(deleteSupplier).mockRejectedValue(apiError);
+    const options = deleteSupplierMutationOptions(client);
+
+    await expect(options.mutationFn(SUPPLIER._id)).rejects.toBe(apiError);
   });
 });
 

@@ -7,8 +7,10 @@ import {
 import {
   createCategory,
   createProduct,
+  createSupplier,
   deleteCategory,
   deleteProduct,
+  deleteSupplier,
   getCategories,
   getMovements,
   getMovementsByProduct,
@@ -17,11 +19,14 @@ import {
   getSuppliers,
   updateCategory,
   updateProduct,
+  updateSupplier,
   type UpdateCategoryInput,
   type UpdateProductInput,
+  type UpdateSupplierInput,
 } from "@/lib/api";
 import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
+import type { CreateSupplierInput } from "@/schemas/supplier";
 
 export const queryKeys = {
   products: {
@@ -227,4 +232,45 @@ export function useUpdateCategory() {
 export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation(deleteCategoryMutationOptions(queryClient));
+}
+
+function invalidateSuppliers(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.all });
+}
+
+export function createSupplierMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (input: CreateSupplierInput) => createSupplier(input),
+    onSuccess: () => invalidateSuppliers(queryClient),
+  };
+}
+
+export function updateSupplierMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (variables: { id: string; input: UpdateSupplierInput }) =>
+      updateSupplier(variables.id, variables.input),
+    onSuccess: () => invalidateSuppliers(queryClient),
+  };
+}
+
+export function deleteSupplierMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (id: string) => deleteSupplier(id),
+    onSuccess: () => invalidateSuppliers(queryClient),
+  };
+}
+
+export function useCreateSupplier() {
+  const queryClient = useQueryClient();
+  return useMutation(createSupplierMutationOptions(queryClient));
+}
+
+export function useUpdateSupplier() {
+  const queryClient = useQueryClient();
+  return useMutation(updateSupplierMutationOptions(queryClient));
+}
+
+export function useDeleteSupplier() {
+  const queryClient = useQueryClient();
+  return useMutation(deleteSupplierMutationOptions(queryClient));
 }

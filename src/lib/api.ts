@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AppErrorKind, FieldIssue } from "@/lib/errors";
 import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
+import type { CreateSupplierInput } from "@/schemas/supplier";
 import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
@@ -9,6 +10,7 @@ import type { SupplierDTO } from "@/types/supplier";
 
 export type UpdateProductInput = Partial<CreateProductInput>;
 export type UpdateCategoryInput = Partial<CreateCategoryInput>;
+export type UpdateSupplierInput = Partial<CreateSupplierInput>;
 
 export class ApiError extends Error {
   readonly kind: AppErrorKind;
@@ -248,6 +250,33 @@ export async function getSuppliers(
     supplierListSchema,
     signal ? { signal } : undefined,
   );
+}
+
+export async function createSupplier(
+  input: CreateSupplierInput,
+): Promise<SupplierDTO> {
+  return fetchJson("/api/suppliers", supplierSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateSupplier(
+  id: string,
+  input: UpdateSupplierInput,
+): Promise<SupplierDTO> {
+  return fetchJson(`/api/suppliers/${id}`, supplierSchema, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteSupplier(id: string): Promise<SupplierDTO> {
+  return fetchJson(`/api/suppliers/${id}`, supplierSchema, {
+    method: "DELETE",
+  });
 }
 
 export async function createProduct(
