@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createCategory,
   createProduct,
+  deleteCategory,
   deleteProduct,
   getCategories,
   getMovements,
@@ -8,6 +10,7 @@ import {
   getProduct,
   getProducts,
   getSuppliers,
+  updateCategory,
   updateProduct,
 } from "@/lib/api";
 
@@ -476,6 +479,178 @@ describe("getMovementsByProduct", () => {
       status: 400,
       message: "El ID no es válido",
       issues: [{ path: "productId", message: "El ID no es válido" }],
+    });
+  });
+});
+
+describe("createCategory", () => {
+  it("hace POST a /api/categories con el body y devuelve la categoría", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ data: CATEGORY }, { status: 201 }),
+    );
+    const input = { name: "Tecnología", description: "Electrónica y más" };
+
+    const result = await createCategory(input);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/categories", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(input),
+    });
+    expect(result).toEqual(CATEGORY);
+  });
+
+  it("propaga el CONFLICT de nombre duplicado con issues del servidor", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "CONFLICT",
+            message: "Ese nombre ya está en uso",
+            issues: [{ path: "name", message: "Ese nombre ya está en uso" }],
+          },
+        },
+        { status: 409 },
+      ),
+    );
+
+    await expect(createCategory({ name: "Tecnología" })).rejects.toMatchObject(
+      {
+        name: "ApiError",
+        kind: "CONFLICT",
+        status: 409,
+        message: "Ese nombre ya está en uso",
+        issues: [{ path: "name", message: "Ese nombre ya está en uso" }],
+      },
+    );
+  });
+
+  it("rechaza una respuesta que no valida contra el esquema de categoría", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ data: { ...CATEGORY, _id: "no-es-un-id" } }, { status: 201 }),
+    );
+
+    await expect(createCategory({ name: "Tecnología" })).rejects.toMatchObject(
+      {
+        name: "ApiError",
+        status: 201,
+        message: "Respuesta inesperada del servidor",
+      },
+    );
+  });
+});
+
+describe("updateCategory", () => {
+  it("hace PUT a /api/categories/:id con el body parcial", async () => {
+    const updated = { ...CATEGORY, name: "Tecnología 2" };
+    fetchMock.mockResolvedValue(Response.json({ data: updated }));
+
+    const result = await updateCategory(CATEGORY._id, {
+      name: "Tecnología 2",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/categories/${CATEGORY._id}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ name: "Tecnología 2" }),
+    });
+    expect(result).toEqual(updated);
+  });
+
+  it("propaga el NOT_FOUND cuando la categoría no existe", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: { kind: "NOT_FOUND", message: "La categoría no existe" } },
+        { status: 404 },
+      ),
+    );
+
+    await expect(
+      updateCategory(CATEGORY._id, { name: "Tecnología 2" }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "NOT_FOUND",
+      status: 404,
+      message: "La categoría no existe",
+    });
+  });
+
+  it("propaga el CONFLICT de nombre duplicado con issues del servidor", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "CONFLICT",
+            message: "Ese nombre ya está en uso",
+            issues: [{ path: "name", message: "Ese nombre ya está en uso" }],
+          },
+        },
+        { status: 409 },
+      ),
+    );
+
+    await expect(
+      updateCategory(CATEGORY._id, { name: "Tecnología 2" }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "CONFLICT",
+      status: 409,
+      message: "Ese nombre ya está en uso",
+      issues: [{ path: "name", message: "Ese nombre ya está en uso" }],
+    });
+  });
+});
+
+describe("deleteCategory", () => {
+  it("hace DELETE a /api/categories/:id y devuelve la categoría archivada", async () => {
+    const archived = {
+      ...CATEGORY,
+      deletedAt: "2026-02-01T10:00:00.000Z",
+    };
+    fetchMock.mockResolvedValue(Response.json({ data: archived }));
+
+    const result = await deleteCategory(CATEGORY._id);
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/categories/${CATEGORY._id}`, {
+      method: "DELETE",
+    });
+    expect(result).toEqual(archived);
+  });
+
+  it("propaga el CONFLICT cuando la categoría está en uso por productos", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "CONFLICT",
+            message: "La categoría está en uso por productos",
+          },
+        },
+        { status: 409 },
+      ),
+    );
+
+    await expect(deleteCategory(CATEGORY._id)).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "CONFLICT",
+      status: 409,
+      message: "La categoría está en uso por productos",
+    });
+  });
+
+  it("propaga el NOT_FOUND cuando la categoría no existe", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: { kind: "NOT_FOUND", message: "La categoría no existe" } },
+        { status: 404 },
+      ),
+    );
+
+    await expect(deleteCategory(CATEGORY._id)).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "NOT_FOUND",
+      status: 404,
+      message: "La categoría no existe",
     });
   });
 });

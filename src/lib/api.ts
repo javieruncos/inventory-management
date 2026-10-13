@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AppErrorKind, FieldIssue } from "@/lib/errors";
+import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
@@ -7,6 +8,7 @@ import type { StockMovementDTO } from "@/types/stockMovement";
 import type { SupplierDTO } from "@/types/supplier";
 
 export type UpdateProductInput = Partial<CreateProductInput>;
+export type UpdateCategoryInput = Partial<CreateCategoryInput>;
 
 export class ApiError extends Error {
   readonly kind: AppErrorKind;
@@ -209,6 +211,33 @@ export async function getCategories(
     categoryListSchema,
     signal ? { signal } : undefined,
   );
+}
+
+export async function createCategory(
+  input: CreateCategoryInput,
+): Promise<CategoryDTO> {
+  return fetchJson("/api/categories", categorySchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateCategory(
+  id: string,
+  input: UpdateCategoryInput,
+): Promise<CategoryDTO> {
+  return fetchJson(`/api/categories/${id}`, categorySchema, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteCategory(id: string): Promise<CategoryDTO> {
+  return fetchJson(`/api/categories/${id}`, categorySchema, {
+    method: "DELETE",
+  });
 }
 
 export async function getSuppliers(

@@ -5,7 +5,9 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import {
+  createCategory,
   createProduct,
+  deleteCategory,
   deleteProduct,
   getCategories,
   getMovements,
@@ -13,9 +15,12 @@ import {
   getProduct,
   getProducts,
   getSuppliers,
+  updateCategory,
   updateProduct,
+  type UpdateCategoryInput,
   type UpdateProductInput,
 } from "@/lib/api";
+import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 
 export const queryKeys = {
@@ -181,4 +186,45 @@ export function useUpdateProduct() {
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
   return useMutation(deleteProductMutationOptions(queryClient));
+}
+
+function invalidateCategories(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
+}
+
+export function createCategoryMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (input: CreateCategoryInput) => createCategory(input),
+    onSuccess: () => invalidateCategories(queryClient),
+  };
+}
+
+export function updateCategoryMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (variables: { id: string; input: UpdateCategoryInput }) =>
+      updateCategory(variables.id, variables.input),
+    onSuccess: () => invalidateCategories(queryClient),
+  };
+}
+
+export function deleteCategoryMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (id: string) => deleteCategory(id),
+    onSuccess: () => invalidateCategories(queryClient),
+  };
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation(createCategoryMutationOptions(queryClient));
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation(updateCategoryMutationOptions(queryClient));
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  return useMutation(deleteCategoryMutationOptions(queryClient));
 }

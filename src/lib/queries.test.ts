@@ -1,7 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import {
+  createCategory,
   createProduct,
+  deleteCategory,
   deleteProduct,
   getCategories,
   getMovements,
@@ -9,12 +11,15 @@ import {
   getProduct,
   getProducts,
   getSuppliers,
+  updateCategory,
   updateProduct,
 } from "@/lib/api";
 import type { CreateProductInput } from "@/schemas/product";
 import {
   categoriesQueryOptions,
+  createCategoryMutationOptions,
   createProductMutationOptions,
+  deleteCategoryMutationOptions,
   deleteProductMutationOptions,
   isValidObjectId,
   movementsQueryOptions,
@@ -25,6 +30,7 @@ import {
   queryKeys,
   suppliersQueryOptions,
   toViewStatus,
+  updateCategoryMutationOptions,
   updateProductMutationOptions,
 } from "@/lib/queries";
 
@@ -38,6 +44,9 @@ vi.mock("@/lib/api", () => ({
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
+  createCategory: vi.fn(),
+  updateCategory: vi.fn(),
+  deleteCategory: vi.fn(),
 }));
 
 const PRODUCT = {
@@ -328,6 +337,94 @@ describe("deleteProductMutationOptions", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: queryKeys.products.all,
     });
+  });
+});
+
+describe("createCategoryMutationOptions", () => {
+  it("envía el input a createCategory y devuelve la categoría", async () => {
+    const client = new QueryClient();
+    vi.mocked(createCategory).mockResolvedValue(CATEGORY);
+    const options = createCategoryMutationOptions(client);
+    const input = { name: "Tecnología", description: "Electrónica y más" };
+
+    await expect(options.mutationFn(input)).resolves.toEqual(CATEGORY);
+
+    expect(createCategory).toHaveBeenCalledWith(input);
+  });
+
+  it("invalida la raíz de categorías al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createCategoryMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.categories.all,
+    });
+  });
+});
+
+describe("updateCategoryMutationOptions", () => {
+  it("envía id e input a updateCategory y devuelve la categoría", async () => {
+    const client = new QueryClient();
+    const updated = { ...CATEGORY, name: "Tecnología 2" };
+    vi.mocked(updateCategory).mockResolvedValue(updated);
+    const options = updateCategoryMutationOptions(client);
+
+    await expect(
+      options.mutationFn({ id: CATEGORY._id, input: { name: "Tecnología 2" } }),
+    ).resolves.toEqual(updated);
+
+    expect(updateCategory).toHaveBeenCalledWith(CATEGORY._id, {
+      name: "Tecnología 2",
+    });
+  });
+
+  it("invalida la raíz de categorías al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    updateCategoryMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.categories.all,
+    });
+  });
+});
+
+describe("deleteCategoryMutationOptions", () => {
+  it("envía el id a deleteCategory y devuelve la categoría archivada", async () => {
+    const client = new QueryClient();
+    const archived = { ...CATEGORY, deletedAt: "2026-02-01T10:00:00.000Z" };
+    vi.mocked(deleteCategory).mockResolvedValue(archived);
+    const options = deleteCategoryMutationOptions(client);
+
+    await expect(options.mutationFn(CATEGORY._id)).resolves.toEqual(archived);
+
+    expect(deleteCategory).toHaveBeenCalledWith(CATEGORY._id);
+  });
+
+  it("invalida la raíz de categorías al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    deleteCategoryMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.categories.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error("La categoría está en uso por productos");
+    vi.mocked(deleteCategory).mockRejectedValue(apiError);
+    const options = deleteCategoryMutationOptions(client);
+
+    await expect(options.mutationFn(CATEGORY._id)).rejects.toBe(apiError);
   });
 });
 
