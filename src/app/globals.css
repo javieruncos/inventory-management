@@ -1,6 +1,156 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens — fuente: DESIGN.md
+ * Spacing (DESIGN.md §8): escala por defecto de Tailwind (1=4px, 2=8px, 4=16px,
+ * 6=24px, 8=32px) + gutter 20px (= gap-5 / p-5) + margen desktop 32px (= p-8)
+ * + margen mobile 16px (= p-4).
+ */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Familia temporal (Fase 1): system-ui. Plus Jakarta Sans se evaluará después. */
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+
+  /* --- Colors: superficies y bordes (DESIGN.md §5.1, §6) --- */
+  --color-canvas: #f6f8fc;
+  --color-surface: #ffffff;
+  --color-surface-nested: #f8fafc;
+  --color-surface-shell: #fafbfe;
+  --color-border: #eef1f6;
+  --color-border-strong: #e2e8f0;
+  --color-divider: #f1f5f9;
+
+  /* --- Colors: marca (DESIGN.md §5.1) --- */
+  --color-primary: #5b5fc7;
+  --color-primary-alt: #4f46e5;
+  --color-primary-soft: #eef2ff;
+  --color-secondary: #6366f1;
+  --color-success: #10b981;
+  --color-neutral: #64748b;
+
+  /* --- Colors: texto (DESIGN.md §5.1) --- */
+  --color-text: #0b1c30;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-secondary-btn-text: #334155;
+
+  /* --- Colors: estados de inventario (DESIGN.md §5.2) ---
+   * Fondos y dots = §5.2 sin cambios. Textos oscurecidos un paso dentro de la
+   * misma familia de tono para cumplir contraste WCAG AA >= 4.5:1 (DESIGN §20). */
+  --color-status-in-bg: #ecfdf5;
+  --color-status-in-text: #047857;
+  --color-status-in-dot: #10b981;
+
+  --color-status-low-bg: #fffbeb;
+  --color-status-low-text: #b45309;
+  --color-status-low-dot: #f59e0b;
+
+  --color-status-out-bg: #fef2f2;
+  --color-status-out-text: #b91c1c;
+  --color-status-out-dot: #ef4444;
+
+  --color-status-archived-bg: #f1f5f9;
+  --color-status-archived-text: #475569;
+  --color-status-archived-dot: #94a3b8;
+
+  /* --- Radii (DESIGN.md §7) --- */
+  --radius-sm: 4px;
+  --radius-control: 10px;
+  --radius-nested: 12px;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  /* --- Elevation (DESIGN.md §6) --- */
+  --shadow-card:
+    0 4px 20px -2px rgb(99 102 241 / 0.03),
+    0 2px 6px -1px rgb(15 23 42 / 0.04);
+  --shadow-popover:
+    0 10px 25px -5px rgb(15 23 42 / 0.08),
+    0 4px 10px -2px rgb(15 23 42 / 0.03);
+  --shadow-dialog: 0 25px 50px -12px rgb(15 23 42 / 0.15);
+
+  /* --- Typography (DESIGN.md §4.1) --- */
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+
+  --text-heading-lg: 24px;
+  --text-heading-lg--line-height: 32px;
+  --text-heading-lg--font-weight: 600;
+  --text-heading-lg--letter-spacing: -0.015em;
+
+  --text-heading-md: 20px;
+  --text-heading-md--line-height: 28px;
+  --text-heading-md--font-weight: 600;
+  --text-heading-md--letter-spacing: -0.01em;
+
+  --text-heading-sm: 16px;
+  --text-heading-sm--line-height: 24px;
+  --text-heading-sm--font-weight: 600;
+
+  --text-stat: 24px;
+  --text-stat--line-height: 32px;
+  --text-stat--font-weight: 700;
+  --text-stat--letter-spacing: -0.02em;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-label--font-weight: 600;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--font-weight: 600;
+  --text-label-sm--letter-spacing: 0.02em;
+
+  /* --- Motion (DESIGN.md §19) --- */
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- Breakpoints (auditoría: desktop >=1200, tablet 768-1199, mobile <768) --- */
+  --breakpoint-desktop: 1200px;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-canvas text-text;
+  }
+
+  /* Foco visible consistente (DESIGN.md §20, better-accessibility): anillo 2px primary */
+  :focus-visible {
+    @apply outline-2 outline-primary outline-offset-2;
+  }
+
+  ::selection {
+    @apply bg-primary-soft text-text;
+  }
+}
+
+/* Motion reducido (DESIGN.md §19): sin animaciones ni transiciones decorativas */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
