@@ -144,7 +144,7 @@ export function StockMovementsView() {
               aria-pressed={filter === option.value}
               onClick={() => setFilter(option.value)}
               className={cn(
-                "h-8 rounded-pill px-3 text-label",
+                "h-10 rounded-pill px-3 text-label",
                 "transition-colors duration-150 ease-emphasized",
                 "motion-reduce:transition-none",
                 filter === option.value

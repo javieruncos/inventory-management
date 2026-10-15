@@ -165,7 +165,7 @@ export function ProductsView() {
                 aria-pressed={filter === option.value}
                 onClick={() => setFilter(option.value)}
                 className={cn(
-                  "h-8 rounded-pill px-3 text-label",
+                  "h-10 rounded-pill px-3 text-label",
                   "transition-colors duration-150 ease-emphasized",
                   filter === option.value
                     ? "bg-primary-soft text-primary"
