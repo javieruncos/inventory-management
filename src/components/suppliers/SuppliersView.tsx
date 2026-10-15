@@ -30,6 +30,16 @@ type DialogState =
 const pulseClass =
   "animate-pulse motion-reduce:animate-none bg-surface-nested";
 
+function deleteErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.kind === "CONFLICT" && error.message) return error.message;
+    if (error.kind === "NOT_FOUND") {
+      return "El registro ya no existe. Actualizá el listado.";
+    }
+  }
+  return "No se pudo completar la operación. Intentá nuevamente.";
+}
+
 function SuppliersSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-hidden="true">
@@ -93,11 +103,7 @@ export function SuppliersView() {
     });
 
     if (result.status === "failed") {
-      await notifyError(
-        result.error instanceof ApiError
-          ? result.error.message
-          : "No se pudo eliminar el proveedor. Intentá nuevamente.",
-      );
+      await notifyError(deleteErrorMessage(result.error));
       return;
     }
 

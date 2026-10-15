@@ -35,6 +35,16 @@ const FILTERS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
   { value: "outOfStock", label: "Agotado" },
 ];
 
+function deleteErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.kind === "CONFLICT" && error.message) return error.message;
+    if (error.kind === "NOT_FOUND") {
+      return "El registro ya no existe. Actualizá el listado.";
+    }
+  }
+  return "No se pudo completar la operación. Intentá nuevamente.";
+}
+
 export function ProductsView() {
   const productsQuery = useProducts();
   const deleteMutation = useDeleteProduct();
@@ -72,11 +82,7 @@ export function ProductsView() {
     });
 
     if (result.status === "failed") {
-      await notifyError(
-        result.error instanceof ApiError
-          ? result.error.message
-          : "No se pudo eliminar el producto. Intentá nuevamente.",
-      );
+      await notifyError(deleteErrorMessage(result.error));
       return;
     }
 

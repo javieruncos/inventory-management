@@ -197,30 +197,42 @@ export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
           control={control}
           name="productId"
           render={({ field, fieldState }) => (
-            <Select
-              id="movement-product"
-              label="Producto"
-              required
-              error={fieldState.error?.message}
-              hint={
-                productsStatus === "error"
-                  ? "No se pudieron cargar los productos."
-                  : undefined
-              }
-              selectProps={{
-                value: field.value,
-                onChange: field.onChange,
-                onBlur: field.onBlur,
-                disabled: isPending || productsStatus !== "ready",
-              }}
-            >
-              <option value="">Seleccionar producto</option>
-              {products.map((product) => (
-                <option key={product._id} value={product._id}>
-                  {product.name}
-                </option>
-              ))}
-            </Select>
+            <div className="flex flex-col gap-2">
+              <Select
+                id="movement-product"
+                label="Producto"
+                required
+                error={fieldState.error?.message}
+                hint={
+                  productsStatus === "error"
+                    ? "No se pudieron cargar los productos."
+                    : undefined
+                }
+                selectProps={{
+                  value: field.value,
+                  onChange: field.onChange,
+                  onBlur: field.onBlur,
+                  disabled: isPending || productsStatus !== "ready",
+                }}
+              >
+                <option value="">Seleccionar producto</option>
+                {products.map((product) => (
+                  <option key={product._id} value={product._id}>
+                    {product.name}
+                  </option>
+                ))}
+              </Select>
+              {productsStatus === "error" ? (
+                <div>
+                  <Button
+                    variant="secondary"
+                    onClick={() => void productsQuery.refetch()}
+                  >
+                    Reintentar
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           )}
         />
 

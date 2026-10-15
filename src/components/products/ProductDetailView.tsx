@@ -131,6 +131,37 @@ function MovementsSkeleton() {
   );
 }
 
+type LookupStatus = "loading" | "error" | "ready";
+
+type LookupValueProps = {
+  status: LookupStatus;
+  value?: string;
+  emptyLabel: string;
+  errorLabel: string;
+};
+
+function LookupValue({
+  status,
+  value,
+  emptyLabel,
+  errorLabel,
+}: LookupValueProps) {
+  if (status === "error") {
+    return (
+      <span className="flex flex-col gap-0.5">
+        <span>No disponible</span>
+        <span className="text-caption text-text-secondary">{errorLabel}</span>
+      </span>
+    );
+  }
+
+  if (status === "loading") {
+    return <span className="text-text-secondary">Cargando…</span>;
+  }
+
+  return <>{value ?? emptyLabel}</>;
+}
+
 type DetailErrorProps = {
   message: string;
   onRetry?: () => void;
@@ -333,6 +364,8 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
       )
     : undefined;
   const description = product.description?.trim();
+  const categoriesStatus = toViewStatus(categoriesQuery);
+  const suppliersStatus = toViewStatus(suppliersQuery);
 
   return (
     <div className="flex flex-col gap-5">
@@ -373,13 +406,27 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
           <div className="min-w-0">
             <dt className="text-caption text-text-secondary">Categoría</dt>
             <dd className="mt-1 text-body text-text">
-              {category ? category.name : "Sin categoría"}
+              <LookupValue
+                status={categoriesStatus}
+                value={category?.name}
+                emptyLabel="Sin categoría"
+                errorLabel="No se pudo cargar la categoría."
+              />
             </dd>
           </div>
           <div className="min-w-0">
             <dt className="text-caption text-text-secondary">Proveedor</dt>
             <dd className="mt-1 text-body text-text">
-              {supplier ? supplier.name : "Sin proveedor"}
+              {product.supplierId ? (
+                <LookupValue
+                  status={suppliersStatus}
+                  value={supplier?.name}
+                  emptyLabel="Sin proveedor"
+                  errorLabel="No se pudo cargar el proveedor."
+                />
+              ) : (
+                "Sin proveedor"
+              )}
             </dd>
           </div>
           <div className="min-w-0">
