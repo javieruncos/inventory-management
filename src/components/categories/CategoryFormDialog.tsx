@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { ApiError } from "@/lib/api";
 import type { FieldIssue } from "@/lib/errors";
 import { useCreateCategory, useUpdateCategory } from "@/lib/queries";
+import { notifySuccess } from "@/lib/sweetAlert";
 import { createCategorySchema } from "@/schemas/category";
 import type { CategoryDTO } from "@/types/category";
 
@@ -100,17 +101,21 @@ export function CategoryFormDialog({
   };
 
   const saveCategory = async (payload: CategoryFormValues) => {
+    let message: string;
     if (mode === "create") {
       await createMutation.mutateAsync(payload);
+      message = "Categoría creada";
     } else if (category) {
       await updateMutation.mutateAsync({
         id: category._id,
         input: payload,
       });
+      message = "Categoría actualizada";
     } else {
       setFormError("No se pudo guardar la categoría.");
       return;
     }
+    void notifySuccess(message);
     onClose();
   };
 

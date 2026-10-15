@@ -19,7 +19,7 @@ import {
   useDeleteSupplier,
   useSuppliers,
 } from "@/lib/queries";
-import { confirmDelete, notifyError } from "@/lib/sweetAlert";
+import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { SupplierDTO } from "@/types/supplier";
 
 type DialogState =
@@ -102,6 +102,7 @@ export function SuppliersView() {
     }
 
     if (result.status === "confirmed") {
+      void notifySuccess("Proveedor eliminado");
       listSectionRef.current?.focus();
     }
   };

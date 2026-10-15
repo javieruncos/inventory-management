@@ -23,6 +23,7 @@ import {
   useSuppliers,
   useUpdateProduct,
 } from "@/lib/queries";
+import { notifySuccess } from "@/lib/sweetAlert";
 import type { CreateProductInput } from "@/schemas/product";
 import type { ProductDTO } from "@/types/product";
 
@@ -122,17 +123,21 @@ export function ProductFormDialog({
   };
 
   const saveProduct = async (payload: CreateProductInput) => {
+    let message: string;
     if (mode === "create") {
       await createMutation.mutateAsync(payload);
+      message = "Producto creado";
     } else if (product) {
       await updateMutation.mutateAsync({
         id: product._id,
         input: payload,
       });
+      message = "Producto actualizado";
     } else {
       setFormError("No se pudo guardar el producto.");
       return;
     }
+    void notifySuccess(message);
     onClose();
   };
 

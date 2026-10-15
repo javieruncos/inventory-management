@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/FormField";
 import { ApiError } from "@/lib/api";
 import type { FieldIssue } from "@/lib/errors";
 import { useCreateSupplier, useUpdateSupplier } from "@/lib/queries";
+import { notifySuccess } from "@/lib/sweetAlert";
 import { createSupplierSchema } from "@/schemas/supplier";
 import type { SupplierDTO } from "@/types/supplier";
 
@@ -117,18 +118,22 @@ export function SupplierFormDialog({
 
   const saveSupplier = async (values: SupplierFormValues) => {
     const payload = buildMutationPayload(values);
+    let message: string;
 
     if (mode === "create") {
       await createMutation.mutateAsync(payload);
+      message = "Proveedor creado";
     } else if (supplier) {
       await updateMutation.mutateAsync({
         id: supplier._id,
         input: payload,
       });
+      message = "Proveedor actualizado";
     } else {
       setFormError("No se pudo guardar el proveedor.");
       return;
     }
+    void notifySuccess(message);
     onClose();
   };
 

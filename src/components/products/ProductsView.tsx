@@ -18,7 +18,7 @@ import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { getStockStatus, type StockStatus } from "@/lib/dashboard";
 import { toViewStatus, useDeleteProduct, useProducts } from "@/lib/queries";
-import { confirmDelete, notifyError } from "@/lib/sweetAlert";
+import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { ProductDTO } from "@/types/product";
 
 type StatusFilter = "ALL" | StockStatus;
@@ -81,6 +81,7 @@ export function ProductsView() {
     }
 
     if (result.status === "confirmed") {
+      void notifySuccess("Producto eliminado");
       listSectionRef.current?.focus();
     }
   };

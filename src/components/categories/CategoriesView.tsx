@@ -19,7 +19,7 @@ import {
   useCategories,
   useDeleteCategory,
 } from "@/lib/queries";
-import { confirmDelete, notifyError } from "@/lib/sweetAlert";
+import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { CategoryDTO } from "@/types/category";
 
 type DialogState =
@@ -102,6 +102,7 @@ export function CategoriesView() {
     }
 
     if (result.status === "confirmed") {
+      void notifySuccess("Categoría eliminada");
       listSectionRef.current?.focus();
     }
   };
