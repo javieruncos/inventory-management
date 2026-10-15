@@ -8,6 +8,7 @@ import {
   filterMovements,
   getRecentMovements,
   getStockStatus,
+  recentMovementsCountLabel,
   sortByCriticality,
   summarizeInventory,
 } from "@/lib/dashboard";
@@ -379,6 +380,38 @@ describe("filterMovements", () => {
     expect(filterMovements([], "ALL")).toEqual([]);
     expect(filterMovements([], "IN")).toEqual([]);
     expect(filterMovements([], "OUT")).toEqual([]);
+  });
+});
+
+describe("recentMovementsCountLabel", () => {
+  it("usa el plural con varias cantidades", () => {
+    expect(recentMovementsCountLabel(5, 12)).toBe(
+      "Mostrando 5 de 12 movimientos",
+    );
+    expect(recentMovementsCountLabel(3, 7)).toBe(
+      "Mostrando 3 de 7 movimientos",
+    );
+    expect(recentMovementsCountLabel(2, 5)).toBe(
+      "Mostrando 2 de 5 movimientos",
+    );
+  });
+
+  it("usa el singular cuando hay un único movimiento", () => {
+    expect(recentMovementsCountLabel(1, 1)).toBe(
+      "Mostrando 1 de 1 movimiento",
+    );
+  });
+
+  it("muestra la cantidad visible cuando coincide con el total", () => {
+    expect(recentMovementsCountLabel(4, 4)).toBe(
+      "Mostrando 4 de 4 movimientos",
+    );
+  });
+
+  it("muestra la cantidad visible cuando es menor que el total", () => {
+    expect(recentMovementsCountLabel(6, 20)).toBe(
+      "Mostrando 6 de 20 movimientos",
+    );
   });
 });
 

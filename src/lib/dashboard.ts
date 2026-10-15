@@ -138,3 +138,13 @@ export function filterMovements(
 
   return movements.filter((movement) => movement.type === filter);
 }
+
+//TEXTO DEL CONTADOR DE MOVIMIENTOS VISIBLES SOBRE EL TOTAL FILTRADO
+export function recentMovementsCountLabel(
+  visible: number,
+  total: number,
+): string {
+  return `Mostrando ${visible} de ${total} ${
+    total === 1 ? "movimiento" : "movimientos"
+  }`;
+}

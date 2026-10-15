@@ -14,6 +14,7 @@ import {
   DEFAULT_RECENT_MOVEMENTS_LIMIT,
   filterMovements,
   getRecentMovements,
+  recentMovementsCountLabel,
   type MovementFilter,
 } from "@/lib/dashboard";
 
@@ -40,12 +41,6 @@ const dateFormat = new Intl.DateTimeFormat("es", {
   hour: "2-digit",
   minute: "2-digit",
 });
-
-function movementLabel(totalMovements: number): string {
-  return totalMovements === 1
-    ? "1 movimiento registrado"
-    : `${totalMovements} movimientos registrados`;
-}
 
 export function RecentMovementsCard({
   status,
@@ -137,7 +132,7 @@ export function RecentMovementsCard({
             })}
           </ul>
           <p className="mt-4 text-caption text-text-secondary">
-            {movementLabel(totalMovements)}
+            {recentMovementsCountLabel(recent.length, filtered.length)}
           </p>
         </>
       );
