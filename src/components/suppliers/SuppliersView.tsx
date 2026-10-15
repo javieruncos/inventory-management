@@ -7,11 +7,10 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { Plus, TriangleAlert } from "lucide-react";
+import { Plus } from "lucide-react";
 import { SuppliersList } from "@/components/suppliers/SuppliersList";
 import { SupplierFormDialog } from "@/components/suppliers/SupplierFormDialog";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -20,6 +19,7 @@ import {
   useDeleteSupplier,
   useSuppliers,
 } from "@/lib/queries";
+import { confirmDelete, notifyError } from "@/lib/sweetAlert";
 import type { SupplierDTO } from "@/types/supplier";
 
 type DialogState =
@@ -29,13 +29,6 @@ type DialogState =
 
 const pulseClass =
   "animate-pulse motion-reduce:animate-none bg-surface-nested";
-
-function contactLineOf(supplier: SupplierDTO): string {
-  return [supplier.email, supplier.phone]
-    .map((value) => value?.trim())
-    .filter(Boolean)
-    .join(" · ");
-}
 
 function SuppliersSkeleton() {
   return (
@@ -70,8 +63,6 @@ export function SuppliersView() {
   const deleteMutation = useDeleteSupplier();
   const status = toViewStatus(suppliersQuery);
   const [dialog, setDialog] = useState<DialogState>(null);
-  const [confirmDelete, setConfirmDelete] = useState<SupplierDTO | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const listSectionRef = useRef<HTMLElement | null>(null);
 
@@ -90,35 +81,28 @@ export function SuppliersView() {
     triggerRef.current?.focus();
   }, []);
 
-  const openDelete = (supplier: SupplierDTO, trigger: HTMLElement) => {
-    triggerRef.current = trigger;
-    setDeleteError(null);
-    setConfirmDelete(supplier);
-  };
+  const handleDelete = async (supplier: SupplierDTO) => {
+    const result = await confirmDelete({
+      title: "Eliminar proveedor",
+      text: `Se quitará "${supplier.name}" del listado de proveedores. Los proveedores que tengan productos asociados no se pueden eliminar.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      onConfirm: async () => {
+        await deleteMutation.mutateAsync(supplier._id);
+      },
+    });
 
-  const cancelDelete = () => {
-    if (deleteMutation.isPending) return;
-    setConfirmDelete(null);
-    setDeleteError(null);
-    triggerRef.current?.focus();
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete || deleteMutation.isPending) return;
-
-    setDeleteError(null);
-
-    try {
-      await deleteMutation.mutateAsync(confirmDelete._id);
-      setConfirmDelete(null);
-      setDeleteError(null);
-      listSectionRef.current?.focus();
-    } catch (error) {
-      setDeleteError(
-        error instanceof ApiError
-          ? error.message
+    if (result.status === "failed") {
+      await notifyError(
+        result.error instanceof ApiError
+          ? result.error.message
           : "No se pudo eliminar el proveedor. Intentá nuevamente.",
       );
+      return;
+    }
+
+    if (result.status === "confirmed") {
+      listSectionRef.current?.focus();
     }
   };
 
@@ -160,7 +144,7 @@ export function SuppliersView() {
         suppliers={suppliers}
         totalSuppliers={suppliers.length}
         onEdit={openEdit}
-        onDelete={openDelete}
+        onDelete={handleDelete}
       />
     );
   }
@@ -169,7 +153,7 @@ export function SuppliersView() {
     <>
       <div
         className="flex flex-col gap-5"
-        inert={dialog !== null || confirmDelete !== null}
+        inert={dialog !== null}
       >
         <PageHeader
           title="Suppliers"
@@ -198,57 +182,6 @@ export function SuppliersView() {
           supplier={dialog.mode === "edit" ? dialog.supplier : null}
           onClose={closeDialog}
         />
-      ) : null}
-      {confirmDelete ? (
-        <Dialog
-          title="Eliminar proveedor"
-          onClose={cancelDelete}
-          closeDisabled={deleteMutation.isPending}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-body font-medium text-text">
-                {confirmDelete.name}
-              </p>
-              {contactLineOf(confirmDelete) ? (
-                <p className="text-caption text-text-secondary">
-                  {contactLineOf(confirmDelete)}
-                </p>
-              ) : null}
-            </div>
-            <p className="text-body text-text-secondary">
-              Se quitará del listado de proveedores. Los proveedores que tengan
-              productos asociados no se pueden eliminar.
-            </p>
-            {deleteError ? (
-              <p
-                role="alert"
-                className="flex items-start gap-1.5 text-body text-status-out-text"
-              >
-                <TriangleAlert
-                  aria-hidden="true"
-                  className="mt-px size-4 shrink-0"
-                />
-                <span>{deleteError}</span>
-              </p>
-            ) : null}
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={cancelDelete}
-                disabled={deleteMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmDelete}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Eliminando…" : "Eliminar"}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
       ) : null}
     </>
   );

@@ -7,11 +7,10 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { Plus, TriangleAlert } from "lucide-react";
+import { Plus } from "lucide-react";
 import { CategoriesList } from "@/components/categories/CategoriesList";
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -20,6 +19,7 @@ import {
   useCategories,
   useDeleteCategory,
 } from "@/lib/queries";
+import { confirmDelete, notifyError } from "@/lib/sweetAlert";
 import type { CategoryDTO } from "@/types/category";
 
 type DialogState =
@@ -63,8 +63,6 @@ export function CategoriesView() {
   const deleteMutation = useDeleteCategory();
   const status = toViewStatus(categoriesQuery);
   const [dialog, setDialog] = useState<DialogState>(null);
-  const [confirmDelete, setConfirmDelete] = useState<CategoryDTO | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const listSectionRef = useRef<HTMLElement | null>(null);
 
@@ -83,35 +81,28 @@ export function CategoriesView() {
     triggerRef.current?.focus();
   }, []);
 
-  const openDelete = (category: CategoryDTO, trigger: HTMLElement) => {
-    triggerRef.current = trigger;
-    setDeleteError(null);
-    setConfirmDelete(category);
-  };
+  const handleDelete = async (category: CategoryDTO) => {
+    const result = await confirmDelete({
+      title: "Eliminar categoría",
+      text: `Se quitará "${category.name}" del listado de categorías. Las categorías que tengan productos asociados no se pueden eliminar.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      onConfirm: async () => {
+        await deleteMutation.mutateAsync(category._id);
+      },
+    });
 
-  const cancelDelete = () => {
-    if (deleteMutation.isPending) return;
-    setConfirmDelete(null);
-    setDeleteError(null);
-    triggerRef.current?.focus();
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete || deleteMutation.isPending) return;
-
-    setDeleteError(null);
-
-    try {
-      await deleteMutation.mutateAsync(confirmDelete._id);
-      setConfirmDelete(null);
-      setDeleteError(null);
-      listSectionRef.current?.focus();
-    } catch (error) {
-      setDeleteError(
-        error instanceof ApiError
-          ? error.message
+    if (result.status === "failed") {
+      await notifyError(
+        result.error instanceof ApiError
+          ? result.error.message
           : "No se pudo eliminar la categoría. Intentá nuevamente.",
       );
+      return;
+    }
+
+    if (result.status === "confirmed") {
+      listSectionRef.current?.focus();
     }
   };
 
@@ -153,7 +144,7 @@ export function CategoriesView() {
         categories={categories}
         totalCategories={categories.length}
         onEdit={openEdit}
-        onDelete={openDelete}
+        onDelete={handleDelete}
       />
     );
   }
@@ -162,7 +153,7 @@ export function CategoriesView() {
     <>
       <div
         className="flex flex-col gap-5"
-        inert={dialog !== null || confirmDelete !== null}
+        inert={dialog !== null}
       >
         <PageHeader
           title="Categories"
@@ -191,57 +182,6 @@ export function CategoriesView() {
           category={dialog.mode === "edit" ? dialog.category : null}
           onClose={closeDialog}
         />
-      ) : null}
-      {confirmDelete ? (
-        <Dialog
-          title="Eliminar categoría"
-          onClose={cancelDelete}
-          closeDisabled={deleteMutation.isPending}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-body font-medium text-text">
-                {confirmDelete.name}
-              </p>
-              {confirmDelete.description?.trim() ? (
-                <p className="text-caption text-text-secondary">
-                  {confirmDelete.description}
-                </p>
-              ) : null}
-            </div>
-            <p className="text-body text-text-secondary">
-              Se quitará del listado de categorías. Las categorías que tengan
-              productos asociados no se pueden eliminar.
-            </p>
-            {deleteError ? (
-              <p
-                role="alert"
-                className="flex items-start gap-1.5 text-body text-status-out-text"
-              >
-                <TriangleAlert
-                  aria-hidden="true"
-                  className="mt-px size-4 shrink-0"
-                />
-                <span>{deleteError}</span>
-              </p>
-            ) : null}
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={cancelDelete}
-                disabled={deleteMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmDelete}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Eliminando…" : "Eliminar"}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
       ) : null}
     </>
   );

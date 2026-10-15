@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "sweetalert2/dist/sweetalert2.min.css";
 
 /*
  * Design tokens — fuente: DESIGN.md
@@ -153,4 +154,29 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * SweetAlert2 — ajuste de precedencia.
+ * El CSS de SweetAlert2 se importa sin capa y sus selectores usan :where(),
+ * por lo que sobreescriben a las utilidades de Tailwind (que viven en
+ * @layer utilities). Estas reglas, también sin capa y con selectores de clase,
+ * ganan por especificidad y reutilizan los mismos tokens del design system
+ * (vía @apply) sin introducir colores, radios, sombras ni z-index nuevos.
+ * Solo afectan a elementos internos de SweetAlert2.
+ */
+.swal2-popup {
+  @apply rounded-card border border-border bg-surface font-sans text-text shadow-dialog;
+}
+
+.swal2-title {
+  @apply text-heading-sm text-text;
+}
+
+.swal2-html-container {
+  @apply text-body text-text-secondary;
+}
+
+.swal2-actions {
+  @apply justify-end gap-3;
 }
