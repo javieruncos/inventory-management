@@ -37,8 +37,7 @@ const FIELD_IDS: Record<(typeof FIELD_ORDER)[number], string> = {
   phone: "supplier-phone",
 };
 
-const CLEARING_HINT =
-  "Vaciar este campo no elimina el valor guardado en el servidor.";
+const CLEARING_HINT = "Vaciar este campo elimina el valor guardado.";
 
 function issuesToFieldErrors(issues?: FieldIssue[]): SupplierFormErrors {
   const errors: SupplierFormErrors = {};
@@ -78,8 +77,8 @@ function buildMutationPayload(values: SupplierFormValues) {
 
   return {
     name: values.name.trim(),
-    ...(email ? { email } : {}),
-    ...(phone ? { phone } : {}),
+    email,
+    phone,
   };
 }
 

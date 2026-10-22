@@ -1,4 +1,4 @@
-import { createProductSchema } from "@/schemas/product";
+import { clearableObjectId, createProductSchema } from "@/schemas/product";
 import { connectDB } from "@/db/connection";
 import ProductModel, { type Product } from "@/db/models/Product";
 import CategoryModel from "@/db/models/Category";
@@ -7,6 +7,7 @@ import { AppError, normalizeError } from "@/lib/errors";
 
 const updateProductSchema = createProductSchema
   .partial()
+  .extend({ supplierId: clearableObjectId })
   .refine(
     (data) => Object.values(data).some((value) => value !== undefined),
     { message: "Debe enviar al menos un campo a actualizar" },
@@ -125,7 +126,7 @@ export async function updateProduct(
     if (data.categoryId !== undefined) {
       await assertCategoryExists(data.categoryId);
     }
-    if (data.supplierId !== undefined) {
+    if (data.supplierId) {
       await assertSupplierExists(data.supplierId);
     }
 

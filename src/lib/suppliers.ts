@@ -1,5 +1,9 @@
 import { Types } from "mongoose";
-import { createSupplierSchema } from "@/schemas/supplier";
+import {
+  clearableEmail,
+  clearablePhone,
+  createSupplierSchema,
+} from "@/schemas/supplier";
 import { connectDB } from "@/db/connection";
 import SupplierModel, { type Supplier } from "@/db/models/Supplier";
 import ProductModel from "@/db/models/Product";
@@ -7,6 +11,7 @@ import { AppError, normalizeError } from "@/lib/errors";
 
 const updateSupplierSchema = createSupplierSchema
   .partial()
+  .extend({ email: clearableEmail, phone: clearablePhone })
   .refine(
     (data) => Object.values(data).some((value) => value !== undefined),
     {

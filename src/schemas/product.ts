@@ -8,6 +8,11 @@ const objectId = z
     "Debe ser un ObjectId válido (24 caracteres hexadecimales)",
   );
 
+export const clearableObjectId = z.preprocess(
+  (value) => (value === "" || value === null ? null : value),
+  objectId.nullable().optional(),
+);
+
 export const createProductSchema = z.strictObject({
   name: z
     .string()

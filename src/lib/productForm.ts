@@ -84,5 +84,10 @@ export function parseProductForm(
     };
   }
 
-  return { ok: true, payload: parsed.data };
+  const payload =
+    mode === "edit"
+      ? { ...parsed.data, supplierId: parsed.data.supplierId ?? "" }
+      : parsed.data;
+
+  return { ok: true, payload };
 }

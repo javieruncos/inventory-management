@@ -356,9 +356,7 @@ export function ProductFormDialog({
                   disabled: isPending || suppliersStatus !== "ready",
                 }}
               >
-                {mode === "create" || !product?.supplierId ? (
-                  <option value="">Sin proveedor</option>
-                ) : null}
+                <option value="">Sin proveedor</option>
                 {supplierMissing ? (
                   <option value={field.value}>Proveedor actual</option>
                 ) : null}
