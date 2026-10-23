@@ -14,6 +14,11 @@ vi.mock("@/db/connection", () => ({
   connectDB: vi.fn().mockResolvedValue(undefined),
 }));
 
+type UpdateOneResult = {
+  matchedCount: number;
+  modifiedCount: number;
+};
+
 describe("createStockMovementSchema", () => {
   it("acepta un movimiento IN válido con productId y reason con espacios", () => {
     const result = createStockMovementSchema.safeParse({
@@ -688,6 +693,10 @@ describe("createMovement", () => {
       _id: "507f1f77bcf86cd799439011",
       currentStock: 5,
     } as unknown as Product;
+    const originalError = new Error("db down");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      return undefined;
+    });
     const updateSpy = vi.spyOn(
       ProductModel,
       "findOneAndUpdate",
@@ -705,14 +714,14 @@ describe("createMovement", () => {
     ) as unknown as MockInstance<
       (doc: Partial<StockMovement>) => Promise<StockMovement>
     >;
-    createSpy.mockRejectedValue(new Error("db down"));
+    createSpy.mockRejectedValue(originalError);
     const updateOneSpy = vi.spyOn(
       ProductModel,
       "updateOne",
     ) as unknown as MockInstance<
-      (filter?: unknown, update?: unknown) => Promise<unknown>
+      (filter?: unknown, update?: unknown) => Promise<UpdateOneResult>
     >;
-    updateOneSpy.mockResolvedValue({});
+    updateOneSpy.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     let thrown: unknown;
 
@@ -733,14 +742,17 @@ describe("createMovement", () => {
 
     expect(result.kind).toBe("INTERNAL");
     expect(result.message).toBe("Error interno del servidor");
+    expect(result.cause).toBe(originalError);
     expect(updateOneSpy).toHaveBeenCalledWith(
-      { _id: "507f1f77bcf86cd799439011" },
+      { _id: "507f1f77bcf86cd799439011", deletedAt: null },
       { $inc: { currentStock: 5 } },
     );
+    expect(consoleSpy).not.toHaveBeenCalled();
 
     updateSpy.mockRestore();
     createSpy.mockRestore();
     updateOneSpy.mockRestore();
+    consoleSpy.mockRestore();
   });
 
   it("compensa el stock de una entrada cuando la creación del movimiento falla", async () => {
@@ -748,6 +760,10 @@ describe("createMovement", () => {
       _id: "507f1f77bcf86cd799439011",
       currentStock: 5,
     } as unknown as Product;
+    const originalError = new Error("db down");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      return undefined;
+    });
     const updateSpy = vi.spyOn(
       ProductModel,
       "findOneAndUpdate",
@@ -765,14 +781,14 @@ describe("createMovement", () => {
     ) as unknown as MockInstance<
       (doc: Partial<StockMovement>) => Promise<StockMovement>
     >;
-    createSpy.mockRejectedValue(new Error("db down"));
+    createSpy.mockRejectedValue(originalError);
     const updateOneSpy = vi.spyOn(
       ProductModel,
       "updateOne",
     ) as unknown as MockInstance<
-      (filter?: unknown, update?: unknown) => Promise<unknown>
+      (filter?: unknown, update?: unknown) => Promise<UpdateOneResult>
     >;
-    updateOneSpy.mockResolvedValue({});
+    updateOneSpy.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 
     let thrown: unknown;
 
@@ -793,21 +809,33 @@ describe("createMovement", () => {
 
     expect(result.kind).toBe("INTERNAL");
     expect(result.message).toBe("Error interno del servidor");
+    expect(result.cause).toBe(originalError);
     expect(updateOneSpy).toHaveBeenCalledWith(
-      { _id: "507f1f77bcf86cd799439011" },
+      {
+        _id: "507f1f77bcf86cd799439011",
+        deletedAt: null,
+        currentStock: { $gte: 5 },
+      },
       { $inc: { currentStock: -5 } },
     );
+    expect(consoleSpy).not.toHaveBeenCalled();
 
     updateSpy.mockRestore();
     createSpy.mockRestore();
     updateOneSpy.mockRestore();
+    consoleSpy.mockRestore();
   });
 
-  it("documenta que el error de la compensación reemplaza al error original", async () => {
+  it("conserva el error original como cause cuando la compensación falla", async () => {
     const product = {
       _id: "507f1f77bcf86cd799439011",
       currentStock: 5,
     } as unknown as Product;
+    const originalError = new Error("movement down");
+    const compensationError = new Error("compensation down");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      return undefined;
+    });
     const updateSpy = vi.spyOn(
       ProductModel,
       "findOneAndUpdate",
@@ -825,17 +853,14 @@ describe("createMovement", () => {
     ) as unknown as MockInstance<
       (doc: Partial<StockMovement>) => Promise<StockMovement>
     >;
-    createSpy.mockRejectedValue({
-      code: 11000,
-      keyPattern: { sku: "SKU-TEST-30" },
-    });
+    createSpy.mockRejectedValue(originalError);
     const updateOneSpy = vi.spyOn(
       ProductModel,
       "updateOne",
     ) as unknown as MockInstance<
-      (filter?: unknown, update?: unknown) => Promise<unknown>
+      (filter?: unknown, update?: unknown) => Promise<UpdateOneResult>
     >;
-    updateOneSpy.mockRejectedValue(new Error("compensation down"));
+    updateOneSpy.mockRejectedValue(compensationError);
 
     let thrown: unknown;
 
@@ -856,14 +881,258 @@ describe("createMovement", () => {
 
     expect(result.kind).toBe("INTERNAL");
     expect(result.message).toBe("Error interno del servidor");
+    expect(result.cause).toBe(originalError);
     expect(updateOneSpy).toHaveBeenCalledWith(
-      { _id: "507f1f77bcf86cd799439011" },
+      { _id: "507f1f77bcf86cd799439011", deletedAt: null },
       { $inc: { currentStock: 5 } },
     );
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    const entry = JSON.parse(
+      consoleSpy.mock.calls[0][0] as string,
+    ) as Record<string, unknown>;
+
+    expect(entry).toMatchObject({
+      event: "stock.compensation.error",
+      productId: "507f1f77bcf86cd799439011",
+      movementType: "OUT",
+      quantity: 5,
+      matchedCount: 0,
+      modifiedCount: 0,
+      originalError: { name: "Error", message: "movement down" },
+      compensationError: { name: "Error", message: "compensation down" },
+    });
+    expect(entry).not.toHaveProperty("reason");
 
     updateSpy.mockRestore();
     createSpy.mockRestore();
     updateOneSpy.mockRestore();
+    consoleSpy.mockRestore();
+  });
+
+  it("no compensa ni registra cuando la creación del movimiento tiene éxito", async () => {
+    const product = {
+      _id: "507f1f77bcf86cd799439011",
+      currentStock: 5,
+    } as unknown as Product;
+    const movement = {
+      _id: "64b000000000000000000024",
+      productId: "507f1f77bcf86cd799439011",
+      type: "IN",
+      quantity: 5,
+      reason: "Reposición",
+      createdAt: new Date(),
+    } as unknown as StockMovement;
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      return undefined;
+    });
+    const updateSpy = vi.spyOn(
+      ProductModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Product | null>
+    >;
+    updateSpy.mockResolvedValue(product);
+    const createSpy = vi.spyOn(
+      StockMovementModel,
+      "create",
+    ) as unknown as MockInstance<
+      (doc: Partial<StockMovement>) => Promise<StockMovement>
+    >;
+    createSpy.mockResolvedValue(movement);
+    const updateOneSpy = vi.spyOn(
+      ProductModel,
+      "updateOne",
+    ) as unknown as MockInstance<
+      (filter?: unknown, update?: unknown) => Promise<UpdateOneResult>
+    >;
+
+    const result = await createMovement({
+      productId: "507f1f77bcf86cd799439011",
+      type: "IN",
+      quantity: 5,
+      reason: "Reposición",
+    });
+
+    expect(result).toBe(movement);
+    expect(updateOneSpy).not.toHaveBeenCalled();
+    expect(consoleSpy).not.toHaveBeenCalled();
+
+    updateSpy.mockRestore();
+    createSpy.mockRestore();
+    updateOneSpy.mockRestore();
+    consoleSpy.mockRestore();
+  });
+
+  it("devuelve INTERNAL y registra cuando la compensación no se aplica", async () => {
+    const product = {
+      _id: "507f1f77bcf86cd799439011",
+      currentStock: 5,
+    } as unknown as Product;
+    const originalError = new Error("movement down");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      return undefined;
+    });
+    const updateSpy = vi.spyOn(
+      ProductModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Product | null>
+    >;
+    updateSpy.mockResolvedValue(product);
+    const createSpy = vi.spyOn(
+      StockMovementModel,
+      "create",
+    ) as unknown as MockInstance<
+      (doc: Partial<StockMovement>) => Promise<StockMovement>
+    >;
+    createSpy.mockRejectedValue(originalError);
+    const updateOneSpy = vi.spyOn(
+      ProductModel,
+      "updateOne",
+    ) as unknown as MockInstance<
+      (filter?: unknown, update?: unknown) => Promise<UpdateOneResult>
+    >;
+    updateOneSpy.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+
+    let thrown: unknown;
+
+    try {
+      await createMovement({
+        productId: "507f1f77bcf86cd799439011",
+        type: "IN",
+        quantity: 5,
+        reason: "Reposición",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("INTERNAL");
+    expect(result.message).toBe("Error interno del servidor");
+    expect(result.cause).toBe(originalError);
+    expect(updateOneSpy).toHaveBeenCalledWith(
+      {
+        _id: "507f1f77bcf86cd799439011",
+        deletedAt: null,
+        currentStock: { $gte: 5 },
+      },
+      { $inc: { currentStock: -5 } },
+    );
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    const entry = JSON.parse(
+      consoleSpy.mock.calls[0][0] as string,
+    ) as Record<string, unknown>;
+
+    expect(entry).toMatchObject({
+      event: "stock.compensation.not_applied",
+      productId: "507f1f77bcf86cd799439011",
+      movementType: "IN",
+      quantity: 5,
+      matchedCount: 0,
+      modifiedCount: 0,
+      originalError: { name: "Error", message: "movement down" },
+    });
+    expect(entry).not.toHaveProperty("compensationError");
+    expect(entry).not.toHaveProperty("reason");
+    expect(JSON.stringify(entry)).not.toContain("Reposición");
+
+    updateSpy.mockRestore();
+    createSpy.mockRestore();
+    updateOneSpy.mockRestore();
+    consoleSpy.mockRestore();
+  });
+
+  it("redacta URIs de MongoDB en los logs de compensación", async () => {
+    const product = {
+      _id: "507f1f77bcf86cd799439011",
+      currentStock: 5,
+    } as unknown as Product;
+    const originalError = new Error(
+      "movement failed for mongodb://alice:secret@db.example/app",
+    );
+    const compensationError = new Error(
+      "compensation failed for mongodb+srv://bob:hunter2@cluster.example/db",
+    );
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      return undefined;
+    });
+    const updateSpy = vi.spyOn(
+      ProductModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Product | null>
+    >;
+    updateSpy.mockResolvedValue(product);
+    const createSpy = vi.spyOn(
+      StockMovementModel,
+      "create",
+    ) as unknown as MockInstance<
+      (doc: Partial<StockMovement>) => Promise<StockMovement>
+    >;
+    createSpy.mockRejectedValue(originalError);
+    const updateOneSpy = vi.spyOn(
+      ProductModel,
+      "updateOne",
+    ) as unknown as MockInstance<
+      (filter?: unknown, update?: unknown) => Promise<UpdateOneResult>
+    >;
+    updateOneSpy.mockRejectedValue(compensationError);
+
+    let thrown: unknown;
+
+    try {
+      await createMovement({
+        productId: "507f1f77bcf86cd799439011",
+        type: "OUT",
+        quantity: 5,
+        reason: "Venta",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("INTERNAL");
+    expect(result.cause).toBe(originalError);
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    const log = consoleSpy.mock.calls[0][0] as string;
+
+    expect(log).toContain("mongodb://***");
+    expect(log).not.toContain("alice");
+    expect(log).not.toContain("secret");
+    expect(log).not.toContain("bob");
+    expect(log).not.toContain("hunter2");
+
+    const entry = JSON.parse(log) as Record<string, unknown>;
+
+    expect(entry.event).toBe("stock.compensation.error");
+
+    updateSpy.mockRestore();
+    createSpy.mockRestore();
+    updateOneSpy.mockRestore();
+    consoleSpy.mockRestore();
   });
 });
 
