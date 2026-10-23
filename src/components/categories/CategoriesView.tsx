@@ -163,7 +163,7 @@ export function CategoriesView() {
         inert={dialog !== null}
       >
         <PageHeader
-          title="Categories"
+          title="Categorías"
           subtitle="Categorías del inventario."
           actions={
             <Button onClick={openCreate}>

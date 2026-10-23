@@ -1,17 +1,25 @@
 "use client";
 
+import { useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowDown,
+  ArrowLeftRight,
   ArrowUp,
   ChevronLeft,
   DollarSign,
   Layers,
   Package,
+  Pencil,
+  Trash,
   TriangleAlert,
 } from "lucide-react";
+import { ProductFormDialog } from "@/components/products/ProductFormDialog";
+import { MovementFormDialog } from "@/components/stock/MovementFormDialog";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { IconButton } from "@/components/ui/IconButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -23,10 +31,12 @@ import {
   isValidObjectId,
   toViewStatus,
   useCategories,
+  useDeleteProduct,
   useProduct,
   useProductMovements,
   useSuppliers,
 } from "@/lib/queries";
+import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
 
@@ -298,11 +308,17 @@ type ProductDetailViewProps = {
   productId: string;
 };
 
+type DetailDialog = "edit" | "movement" | null;
+
 export function ProductDetailView({ productId }: ProductDetailViewProps) {
+  const router = useRouter();
   const productQuery = useProduct(productId);
   const movementsQuery = useProductMovements(productId);
   const categoriesQuery = useCategories();
   const suppliersQuery = useSuppliers();
+  const deleteMutation = useDeleteProduct();
+  const [dialog, setDialog] = useState<DetailDialog>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const status = toViewStatus(productQuery);
 
   if (!isValidObjectId(productId)) {
@@ -354,6 +370,47 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
     return null;
   }
 
+  const openEdit = (event: MouseEvent<HTMLButtonElement>) => {
+    triggerRef.current = event.currentTarget;
+    setDialog("edit");
+  };
+
+  const openMovement = (event: MouseEvent<HTMLButtonElement>) => {
+    triggerRef.current = event.currentTarget;
+    setDialog("movement");
+  };
+
+  const closeDialog = () => {
+    setDialog(null);
+    triggerRef.current?.focus();
+  };
+
+  const handleDelete = async () => {
+    const result = await confirmDelete({
+      title: "Eliminar producto",
+      text: `Se quitará "${product.name}" (SKU: ${product.sku}) del listado y del inventario. El registro se conservará archivado; no se elimina de forma permanente.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      onConfirm: async () => {
+        await deleteMutation.mutateAsync(product._id);
+      },
+    });
+
+    if (result.status === "failed") {
+      await notifyError(
+        result.error instanceof ApiError
+          ? result.error.message
+          : "No se pudo eliminar el producto.",
+      );
+      return;
+    }
+
+    if (result.status === "confirmed") {
+      void notifySuccess("Producto eliminado");
+      router.replace("/products");
+    }
+  };
+
   const badge = badgeOf(product);
   const category = (categoriesQuery.data ?? []).find(
     (item) => item._id === product.categoryId,
@@ -368,92 +425,135 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
   const suppliersStatus = toViewStatus(suppliersQuery);
 
   return (
-    <div className="flex flex-col gap-5">
-      <BackLink />
-      <PageHeader
-        title={product.name}
-        subtitle={`SKU ${product.sku}`}
-        actions={<StatusBadge variant={badge.variant} label={badge.label} />}
-      />
+    <>
+      <div
+        className="flex flex-col gap-5"
+        inert={dialog !== null || deleteMutation.isPending}
+      >
+        <BackLink />
+        <PageHeader
+          title={product.name}
+          subtitle={`SKU ${product.sku}`}
+          actions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <StatusBadge variant={badge.variant} label={badge.label} />
+              <Button
+                onClick={openMovement}
+                disabled={deleteMutation.isPending}
+              >
+                <ArrowLeftRight aria-hidden="true" size={16} />
+                Registrar movimiento
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={openEdit}
+                disabled={deleteMutation.isPending}
+              >
+                <Pencil aria-hidden="true" size={16} />
+                Editar
+              </Button>
+              <IconButton
+                label={`Eliminar ${product.name}`}
+                icon={<Trash size={16} />}
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+              />
+            </div>
+          }
+        />
 
-      <div className="grid gap-4 desktop:grid-cols-3">
-        <StatCard
-          icon={<DollarSign aria-hidden="true" size={18} />}
-          label="Precio"
-          value={numberFormat.format(product.price)}
-        />
-        <StatCard
-          icon={<Package aria-hidden="true" size={18} />}
-          label="Stock actual"
-          value={product.currentStock}
-        />
-        <StatCard
-          icon={<Layers aria-hidden="true" size={18} />}
-          label="Stock mínimo"
-          value={product.minimumStock}
+        <div className="grid gap-4 desktop:grid-cols-3">
+          <StatCard
+            icon={<DollarSign aria-hidden="true" size={18} />}
+            label="Precio"
+            value={numberFormat.format(product.price)}
+          />
+          <StatCard
+            icon={<Package aria-hidden="true" size={18} />}
+            label="Stock actual"
+            value={product.currentStock}
+          />
+          <StatCard
+            icon={<Layers aria-hidden="true" size={18} />}
+            label="Stock mínimo"
+            value={product.minimumStock}
+          />
+        </div>
+
+        <Card>
+          <CardHeader title="Información" />
+          <dl className="grid gap-x-8 gap-y-4 desktop:grid-cols-2">
+            <div className="min-w-0">
+              <dt className="text-caption text-text-secondary">Descripción</dt>
+              <dd className="mt-1 text-body text-text">
+                {description ? description : "Sin descripción"}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-caption text-text-secondary">Categoría</dt>
+              <dd className="mt-1 text-body text-text">
+                <LookupValue
+                  status={categoriesStatus}
+                  value={category?.name}
+                  emptyLabel="Sin categoría"
+                  errorLabel="No se pudo cargar la categoría."
+                />
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-caption text-text-secondary">Proveedor</dt>
+              <dd className="mt-1 text-body text-text">
+                {product.supplierId ? (
+                  <LookupValue
+                    status={suppliersStatus}
+                    value={supplier?.name}
+                    emptyLabel="Sin proveedor"
+                    errorLabel="No se pudo cargar el proveedor."
+                  />
+                ) : (
+                  "Sin proveedor"
+                )}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-caption text-text-secondary">Fechas</dt>
+              <dd className="mt-1 flex flex-col gap-0.5 text-body text-text">
+                <time dateTime={product.createdAt}>
+                  Creado: {dateTimeFormat.format(new Date(product.createdAt))}
+                </time>
+                <time dateTime={product.updatedAt}>
+                  Actualizado:{" "}
+                  {dateTimeFormat.format(new Date(product.updatedAt))}
+                </time>
+              </dd>
+            </div>
+          </dl>
+        </Card>
+
+        <MovementsSection
+          status={toViewStatus(movementsQuery)}
+          movements={movementsQuery.data ?? []}
+          errorMessage={
+            movementsQuery.error instanceof ApiError
+              ? movementsQuery.error.message
+              : undefined
+          }
+          onRetry={() => void movementsQuery.refetch()}
         />
       </div>
 
-      <Card>
-        <CardHeader title="Información" />
-        <dl className="grid gap-x-8 gap-y-4 desktop:grid-cols-2">
-          <div className="min-w-0">
-            <dt className="text-caption text-text-secondary">Descripción</dt>
-            <dd className="mt-1 text-body text-text">
-              {description ? description : "Sin descripción"}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-caption text-text-secondary">Categoría</dt>
-            <dd className="mt-1 text-body text-text">
-              <LookupValue
-                status={categoriesStatus}
-                value={category?.name}
-                emptyLabel="Sin categoría"
-                errorLabel="No se pudo cargar la categoría."
-              />
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-caption text-text-secondary">Proveedor</dt>
-            <dd className="mt-1 text-body text-text">
-              {product.supplierId ? (
-                <LookupValue
-                  status={suppliersStatus}
-                  value={supplier?.name}
-                  emptyLabel="Sin proveedor"
-                  errorLabel="No se pudo cargar el proveedor."
-                />
-              ) : (
-                "Sin proveedor"
-              )}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-caption text-text-secondary">Fechas</dt>
-            <dd className="mt-1 flex flex-col gap-0.5 text-body text-text">
-              <time dateTime={product.createdAt}>
-                Creado: {dateTimeFormat.format(new Date(product.createdAt))}
-              </time>
-              <time dateTime={product.updatedAt}>
-                Actualizado:{" "}
-                {dateTimeFormat.format(new Date(product.updatedAt))}
-              </time>
-            </dd>
-          </div>
-        </dl>
-      </Card>
+      {dialog === "edit" ? (
+        <ProductFormDialog
+          key={product._id}
+          mode="edit"
+          product={product}
+          onClose={closeDialog}
+        />
+      ) : null}
 
-      <MovementsSection
-        status={toViewStatus(movementsQuery)}
-        movements={movementsQuery.data ?? []}
-        errorMessage={
-          movementsQuery.error instanceof ApiError
-            ? movementsQuery.error.message
-            : undefined
-        }
-        onRetry={() => void movementsQuery.refetch()}
-      />
-    </div>
+      {dialog === "movement" ? (
+        <MovementFormDialog product={product} onClose={closeDialog} />
+      ) : null}
+    </>
   );
 }

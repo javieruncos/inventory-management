@@ -201,7 +201,7 @@ export function ProductsView() {
         inert={dialog !== null}
       >
         <PageHeader
-          title="Products"
+          title="Productos"
           subtitle="Catálogo de productos del inventario."
           actions={
             <Button onClick={openCreate}>

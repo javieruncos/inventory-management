@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SuppliersView } from "@/components/suppliers/SuppliersView";
 
 export const metadata: Metadata = {
-  title: "Suppliers",
+  title: "Proveedores",
 };
 
 export default function SuppliersPage() {

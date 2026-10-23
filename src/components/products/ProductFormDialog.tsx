@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -106,6 +107,7 @@ export function ProductFormDialog({
 
   const categoriesUsable =
     categoriesStatus === "ready" && categories.length > 0;
+  const noCategories = categoriesStatus === "ready" && categories.length === 0;
   const canSubmit =
     !isPending &&
     (categoriesUsable || (mode === "edit" && watchedCategoryId !== ""));
@@ -300,40 +302,53 @@ export function ProductFormDialog({
           <Controller
             control={control}
             name="categoryId"
-            render={({ field, fieldState }) => (
-              <Select
-                id="product-category"
-                label="Categoría"
-                required
-                error={
-                  fieldState.error?.message ??
-                  (categoriesStatus === "error"
-                    ? "No se pudieron cargar las categorías."
-                    : undefined)
-                }
-                hint={
-                  categoriesStatus === "ready" && categories.length === 0
-                    ? "No hay categorías disponibles."
-                    : undefined
-                }
-                selectProps={{
-                  value: field.value,
-                  onChange: field.onChange,
-                  onBlur: field.onBlur,
-                  disabled: isPending || categoriesStatus !== "ready",
-                }}
-              >
-                <option value="">Seleccionar categoría</option>
-                {categoryMissing ? (
-                  <option value={field.value}>Categoría actual</option>
-                ) : null}
-                {categories.map((category) => (
-                  <option key={category._id} value={category._id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-            )}
+            render={({ field, fieldState }) =>
+              noCategories && mode === "create" ? (
+                <div className="flex flex-col items-start gap-3 self-stretch rounded-nested border border-border-strong bg-surface-nested p-4">
+                  <p className="text-body text-text-secondary">
+                    No hay categorías disponibles. Para crear un producto
+                    primero necesitás al menos una categoría.
+                  </p>
+                  <Link
+                    href="/categories"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-control border border-border-strong bg-surface px-5 text-label text-secondary-btn-text transition-colors duration-150 ease-emphasized hover:bg-surface-nested focus-visible:outline-primary"
+                  >
+                    Ir a Categorías
+                  </Link>
+                </div>
+              ) : (
+                <Select
+                  id="product-category"
+                  label="Categoría"
+                  required
+                  error={
+                    fieldState.error?.message ??
+                    (categoriesStatus === "error"
+                      ? "No se pudieron cargar las categorías."
+                      : undefined)
+                  }
+                  hint={
+                    noCategories ? "No hay categorías disponibles." : undefined
+                  }
+                  selectProps={{
+                    value: field.value,
+                    onChange: field.onChange,
+                    onBlur: field.onBlur,
+                    disabled: isPending || categoriesStatus !== "ready",
+                  }}
+                >
+                  <option value="">Seleccionar categoría</option>
+                  {categoryMissing ? (
+                    <option value={field.value}>Categoría actual</option>
+                  ) : null}
+                  {categories.map((category) => (
+                    <option key={category._id} value={category._id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </Select>
+              )
+            }
           />
 
           <Controller

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Controller, useForm } from "react-hook-form";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -12,9 +13,11 @@ import { ApiError } from "@/lib/api";
 import type { FieldIssue } from "@/lib/errors";
 import { toViewStatus, useCreateMovement, useProducts } from "@/lib/queries";
 import { createStockMovementSchema } from "@/schemas/stockMovement";
+import type { ProductDTO } from "@/types/product";
 
 type MovementFormDialogProps = {
   onClose: () => void;
+  product?: Pick<ProductDTO, "_id" | "name">;
 };
 
 type MovementFormValues = {
@@ -79,11 +82,14 @@ function focusFirstError(errors: MovementFormErrors): void {
   if (field) document.getElementById(FIELD_IDS[field])?.focus();
 }
 
-export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
+export function MovementFormDialog({
+  onClose,
+  product,
+}: MovementFormDialogProps) {
   const { control, handleSubmit, getValues, setError, clearErrors } =
     useForm<MovementFormValues>({
       defaultValues: {
-        productId: "",
+        productId: product?._id ?? "",
         type: "IN",
         quantity: "",
         reason: "",
@@ -97,6 +103,10 @@ export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
   const products = productsQuery.data ?? [];
 
   const isPending = createMutation.isPending;
+  const noProducts =
+    product === undefined &&
+    productsStatus === "ready" &&
+    products.length === 0;
 
   const applyFieldErrors = (
     errors: MovementFormErrors,
@@ -196,44 +206,70 @@ export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
         <Controller
           control={control}
           name="productId"
-          render={({ field, fieldState }) => (
-            <div className="flex flex-col gap-2">
-              <Select
+          render={({ field, fieldState }) =>
+            product ? (
+              <FormField
                 id="movement-product"
                 label="Producto"
                 required
                 error={fieldState.error?.message}
-                hint={
-                  productsStatus === "error"
-                    ? "No se pudieron cargar los productos."
-                    : undefined
-                }
-                selectProps={{
-                  value: field.value,
-                  onChange: field.onChange,
-                  onBlur: field.onBlur,
-                  disabled: isPending || productsStatus !== "ready",
+                inputProps={{
+                  value: product.name,
+                  readOnly: true,
                 }}
-              >
-                <option value="">Seleccionar producto</option>
-                {products.map((product) => (
-                  <option key={product._id} value={product._id}>
-                    {product.name}
-                  </option>
-                ))}
-              </Select>
-              {productsStatus === "error" ? (
-                <div>
-                  <Button
-                    variant="secondary"
-                    onClick={() => void productsQuery.refetch()}
-                  >
-                    Reintentar
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          )}
+              />
+            ) : noProducts ? (
+              <div className="flex flex-col items-start gap-3 rounded-nested border border-border-strong bg-surface-nested p-4">
+                <p className="text-body text-text-secondary">
+                  No hay productos registrados. Para registrar un movimiento
+                  primero necesitás al menos un producto.
+                </p>
+                <Link
+                  href="/products"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-control border border-border-strong bg-surface px-5 text-label text-secondary-btn-text transition-colors duration-150 ease-emphasized hover:bg-surface-nested focus-visible:outline-primary"
+                >
+                  Ir a Productos
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Select
+                  id="movement-product"
+                  label="Producto"
+                  required
+                  error={fieldState.error?.message}
+                  hint={
+                    productsStatus === "error"
+                      ? "No se pudieron cargar los productos."
+                      : undefined
+                  }
+                  selectProps={{
+                    value: field.value,
+                    onChange: field.onChange,
+                    onBlur: field.onBlur,
+                    disabled: isPending || productsStatus !== "ready",
+                  }}
+                >
+                  <option value="">Seleccionar producto</option>
+                  {products.map((product) => (
+                    <option key={product._id} value={product._id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </Select>
+                {productsStatus === "error" ? (
+                  <div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => void productsQuery.refetch()}
+                    >
+                      Reintentar
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            )
+          }
         />
 
         <Controller
@@ -249,7 +285,7 @@ export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
                 value: field.value,
                 onChange: field.onChange,
                 onBlur: field.onBlur,
-                disabled: isPending,
+                disabled: isPending || noProducts,
               }}
             >
               <option value="IN">Entrada</option>
@@ -274,7 +310,7 @@ export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
                 value: field.value,
                 onChange: field.onChange,
                 onBlur: field.onBlur,
-                disabled: isPending,
+                disabled: isPending || noProducts,
               }}
             />
           )}
@@ -295,7 +331,7 @@ export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
                 onBlur: field.onBlur,
                 maxLength: 500,
                 rows: 3,
-                disabled: isPending,
+                disabled: isPending || noProducts,
               }}
             />
           )}
@@ -309,7 +345,7 @@ export function MovementFormDialog({ onClose }: MovementFormDialogProps) {
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending || noProducts}>
             {isPending ? "Registrando…" : "Registrar"}
           </Button>
         </div>

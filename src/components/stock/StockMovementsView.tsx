@@ -123,7 +123,7 @@ export function StockMovementsView() {
     <>
       <div className="flex flex-col gap-5" inert={dialogOpen}>
         <PageHeader
-          title="Stock Movements"
+          title="Movimientos de stock"
           subtitle="Historial global de entradas y salidas de stock."
           actions={
             <Button onClick={openDialog}>

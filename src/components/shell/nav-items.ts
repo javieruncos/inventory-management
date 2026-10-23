@@ -16,8 +16,8 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Products", href: "/products", icon: Package },
-  { label: "Categories", href: "/categories", icon: FolderTree },
-  { label: "Suppliers", href: "/suppliers", icon: Truck },
-  { label: "Stock Movements", href: "/stock", icon: ArrowLeftRight },
+  { label: "Productos", href: "/products", icon: Package },
+  { label: "Categorías", href: "/categories", icon: FolderTree },
+  { label: "Proveedores", href: "/suppliers", icon: Truck },
+  { label: "Movimientos de stock", href: "/stock", icon: ArrowLeftRight },
 ];

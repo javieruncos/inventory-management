@@ -163,7 +163,7 @@ export function SuppliersView() {
         inert={dialog !== null}
       >
         <PageHeader
-          title="Suppliers"
+          title="Proveedores"
           subtitle="Proveedores del inventario."
           actions={
             <Button onClick={openCreate}>

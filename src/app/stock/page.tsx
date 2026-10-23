@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { StockMovementsView } from "@/components/stock/StockMovementsView";
 
 export const metadata: Metadata = {
-  title: "Stock Movements",
+  title: "Movimientos de stock",
 };
 
 export default function StockMovementsPage() {
