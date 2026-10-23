@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/cn";
-import { getStockStatus, sortByCriticality } from "@/lib/dashboard";
+import { getLowStockAlerts, getStockStatus } from "@/lib/dashboard";
 
 type LowStockCardProps = {
   status: "loading" | "error" | "ready";
@@ -47,11 +47,7 @@ export function LowStockCard({
     );
   } else {
     const loadedProducts = products ?? [];
-    const alerts = sortByCriticality(
-      loadedProducts.filter(
-        (product) => getStockStatus(product) !== "normal",
-      ),
-    );
+    const { alerts, total, hasMore } = getLowStockAlerts(loadedProducts);
 
     if (loadedProducts.length === 0) {
       body = (
@@ -107,9 +103,20 @@ export function LowStockCard({
               );
             })}
           </ul>
-          <p className="mt-4 text-caption text-text-secondary">
-            {attentionLabel(alerts.length)}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-caption text-text-secondary">
+              {attentionLabel(total)}
+            </p>
+            {hasMore ? (
+              <Link
+                href="/products"
+                aria-label="Ver todos los productos"
+                className="inline-flex h-10 items-center text-label text-primary hover:underline"
+              >
+                Ver todos
+              </Link>
+            ) : null}
+          </div>
         </>
       );
     }

@@ -15,6 +15,12 @@ export type InventorySummary = {
   outOfStockCount: number;
 };
 
+export type LowStockAlerts = {
+  alerts: ProductDTO[];
+  total: number;
+  hasMore: boolean;
+};
+
 //ESTRUCTURA DE MOVIMIENTOS CON PRODUCTO
 export type MovementWithProduct = {
   _id: string;
@@ -29,6 +35,8 @@ export type MovementWithProduct = {
 
 //CONSTANTES POR DEFECTO PARA EL LLIMIT DE MOVIMIENTOS RECIENTES
 export const DEFAULT_RECENT_MOVEMENTS_LIMIT = 6;
+
+export const DEFAULT_LOW_STOCK_LIMIT = 6;
 
 // PRIORIDAD DE ESTADO DE STOCK
 const STATUS_PRIORITY: Record<StockStatus, number> = {
@@ -94,6 +102,23 @@ export function sortByCriticality(products: ProductDTO[]): ProductDTO[] {
       (b.currentStock - b.minimumStock)
     );
   });
+}
+
+export function getLowStockAlerts(
+  products: ProductDTO[],
+  options?: { limit?: number },
+): LowStockAlerts {
+  const sorted = sortByCriticality(
+    products.filter((product) => getStockStatus(product) !== "normal"),
+  );
+  const limit = Math.max(0, options?.limit ?? DEFAULT_LOW_STOCK_LIMIT);
+  const alerts = sorted.slice(0, limit);
+
+  return {
+    alerts,
+    total: sorted.length,
+    hasMore: sorted.length > alerts.length,
+  };
 }
 
 //AÑADIR PRODUCTO A LOS MOVIMIENTOS MEDIANTE SU ID

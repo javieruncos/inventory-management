@@ -131,9 +131,20 @@ export function RecentMovementsCard({
               );
             })}
           </ul>
-          <p className="mt-4 text-caption text-text-secondary">
-            {recentMovementsCountLabel(recent.length, filtered.length)}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-caption text-text-secondary">
+              {recentMovementsCountLabel(recent.length, filtered.length)}
+            </p>
+            {totalMovements > 0 ? (
+              <Link
+                href="/stock"
+                aria-label="Ver todos los movimientos de stock"
+                className="inline-flex h-10 items-center text-label text-primary hover:underline"
+              >
+                Ver todos
+              </Link>
+            ) : null}
+          </div>
         </>
       );
     }

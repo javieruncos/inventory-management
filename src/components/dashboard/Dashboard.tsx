@@ -1,11 +1,19 @@
 "use client";
 
-import { ArchiveX, Layers, Package, TriangleAlert } from "lucide-react";
+import {
+  ArchiveX,
+  ArrowLeftRight,
+  Layers,
+  Package,
+  TriangleAlert,
+} from "lucide-react";
+import { DashboardOnboarding } from "@/components/dashboard/DashboardOnboarding";
 import { LowStockCard } from "@/components/dashboard/LowStockCard";
 import { RecentMovementsCard } from "@/components/dashboard/RecentMovementsCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { LinkButton } from "@/components/ui/LinkButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { ApiError } from "@/lib/api";
@@ -31,6 +39,9 @@ export function Dashboard() {
   const summary = productsQuery.data
     ? summarizeInventory(productsQuery.data)
     : null;
+
+  const hasNoProducts =
+    productsStatus === "ready" && products !== null && products.length === 0;
 
   const productsErrorMessage =
     productsStatus === "error"
@@ -61,79 +72,97 @@ export function Dashboard() {
       <PageHeader
         title="Dashboard"
         subtitle="Resumen operativo del inventario."
+        actions={
+          <>
+            <LinkButton href="/products" variant="secondary">
+              <Package aria-hidden="true" size={16} />
+              Gestionar productos
+            </LinkButton>
+            <LinkButton href="/stock">
+              <ArrowLeftRight aria-hidden="true" size={16} />
+              Registrar movimiento
+            </LinkButton>
+          </>
+        }
       />
 
-      <section
-        aria-label="Indicadores de inventario"
-        aria-busy={productsStatus === "loading"}
-        className="grid grid-cols-2 gap-5 max-[767px]:grid-cols-1 desktop:grid-cols-4"
-      >
-        {productsStatus === "loading"
-          ? Array.from({ length: 4 }, (_, index) => (
-              <Card key={index}>
-                <DashboardSkeleton variant="kpis" />
-              </Card>
-            ))
-          : productsStatus === "error"
-            ? (
-              <div
-                role="alert"
-                className="flex flex-col items-start gap-3 rounded-card border border-border bg-surface p-5 shadow-card max-[767px]:col-span-1 max-desktop:col-span-2 desktop:col-span-4"
-              >
-                <p className="text-body text-text-secondary">
-                  {productsErrorMessage}
-                </p>
-                <Button variant="secondary" onClick={retryProducts}>
-                  Reintentar
-                </Button>
-              </div>
-            )
-            : summary
-              ? (
-                <>
-                  <StatCard
-                    icon={<Package size={18} />}
-                    label="Productos totales"
-                    value={numberFormat.format(summary.totalProducts)}
-                  />
-                  <StatCard
-                    icon={<Layers size={18} />}
-                    label="Unidades en stock"
-                    value={numberFormat.format(summary.totalUnits)}
-                  />
-                  <StatCard
-                    icon={<TriangleAlert size={18} />}
-                    label="Stock bajo"
-                    value={numberFormat.format(summary.lowStockCount)}
-                  />
-                  <StatCard
-                    icon={<ArchiveX size={18} />}
-                    label="Stock agotado"
-                    value={numberFormat.format(summary.outOfStockCount)}
-                  />
-                </>
-              )
-              : null}
-      </section>
+      {hasNoProducts ? (
+        <DashboardOnboarding />
+      ) : (
+        <>
+          <section
+            aria-label="Indicadores de inventario"
+            aria-busy={productsStatus === "loading"}
+            className="grid grid-cols-2 gap-5 max-[767px]:grid-cols-1 desktop:grid-cols-4"
+          >
+            {productsStatus === "loading"
+              ? Array.from({ length: 4 }, (_, index) => (
+                  <Card key={index}>
+                    <DashboardSkeleton variant="kpis" />
+                  </Card>
+                ))
+              : productsStatus === "error"
+                ? (
+                  <div
+                    role="alert"
+                    className="flex flex-col items-start gap-3 rounded-card border border-border bg-surface p-5 shadow-card max-[767px]:col-span-1 max-desktop:col-span-2 desktop:col-span-4"
+                  >
+                    <p className="text-body text-text-secondary">
+                      {productsErrorMessage}
+                    </p>
+                    <Button variant="secondary" onClick={retryProducts}>
+                      Reintentar
+                    </Button>
+                  </div>
+                )
+                : summary
+                  ? (
+                    <>
+                      <StatCard
+                        icon={<Package size={18} />}
+                        label="Productos totales"
+                        value={numberFormat.format(summary.totalProducts)}
+                      />
+                      <StatCard
+                        icon={<Layers size={18} />}
+                        label="Unidades en stock"
+                        value={numberFormat.format(summary.totalUnits)}
+                      />
+                      <StatCard
+                        icon={<TriangleAlert size={18} />}
+                        label="Stock bajo"
+                        value={numberFormat.format(summary.lowStockCount)}
+                      />
+                      <StatCard
+                        icon={<ArchiveX size={18} />}
+                        label="Stock agotado"
+                        value={numberFormat.format(summary.outOfStockCount)}
+                      />
+                    </>
+                  )
+                  : null}
+          </section>
 
-      <div className="grid grid-cols-1 items-start gap-5 desktop:grid-cols-12">
-        <RecentMovementsCard
-          className="desktop:col-span-7"
-          status={movementsStatus}
-          movements={movements}
-          products={products}
-          totalMovements={movements ? movements.length : 0}
-          errorMessage={movementsErrorMessage}
-          onRetry={retryMovements}
-        />
-        <LowStockCard
-          className="desktop:col-span-5"
-          status={productsStatus}
-          products={products}
-          errorMessage={productsErrorMessage}
-          onRetry={retryProducts}
-        />
-      </div>
+          <div className="grid grid-cols-1 items-start gap-5 desktop:grid-cols-12">
+            <RecentMovementsCard
+              className="desktop:col-span-7"
+              status={movementsStatus}
+              movements={movements}
+              products={products}
+              totalMovements={movements ? movements.length : 0}
+              errorMessage={movementsErrorMessage}
+              onRetry={retryMovements}
+            />
+            <LowStockCard
+              className="desktop:col-span-5"
+              status={productsStatus}
+              products={products}
+              errorMessage={productsErrorMessage}
+              onRetry={retryProducts}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
