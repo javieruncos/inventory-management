@@ -15,12 +15,20 @@ const categorySchema = new Schema<Category>(
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
     description: { type: String, trim: true },
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true },
+);
+
+categorySchema.index(
+  { name: 1 },
+  {
+    unique: true,
+    name: "name_active_unique",
+    partialFilterExpression: { deletedAt: null },
+  },
 );
 
 const CategoryModel: Model<Category> =

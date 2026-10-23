@@ -1,36 +1,65 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import {
+  createCategory,
+  createMovement,
   createProduct,
+  createSupplier,
+  deleteCategory,
   deleteProduct,
+  deleteSupplier,
   getCategories,
   getMovements,
+  getMovementsByProduct,
+  getProduct,
   getProducts,
   getSuppliers,
+  updateCategory,
   updateProduct,
+  updateSupplier,
 } from "@/lib/api";
 import type { CreateProductInput } from "@/schemas/product";
+import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import {
   categoriesQueryOptions,
+  createCategoryMutationOptions,
+  createMovementMutationOptions,
   createProductMutationOptions,
+  createSupplierMutationOptions,
+  deleteCategoryMutationOptions,
   deleteProductMutationOptions,
+  deleteSupplierMutationOptions,
+  isValidObjectId,
   movementsQueryOptions,
+  productMovementsQueryOptions,
+  productQueryOptions,
   productsQueryOptions,
   queryClientDefaultOptions,
   queryKeys,
   suppliersQueryOptions,
   toViewStatus,
+  updateCategoryMutationOptions,
   updateProductMutationOptions,
+  updateSupplierMutationOptions,
 } from "@/lib/queries";
 
 vi.mock("@/lib/api", () => ({
   getProducts: vi.fn(),
+  getProduct: vi.fn(),
   getMovements: vi.fn(),
+  getMovementsByProduct: vi.fn(),
   getCategories: vi.fn(),
   getSuppliers: vi.fn(),
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
+  createCategory: vi.fn(),
+  updateCategory: vi.fn(),
+  deleteCategory: vi.fn(),
+  createSupplier: vi.fn(),
+  updateSupplier: vi.fn(),
+  deleteSupplier: vi.fn(),
+  createMovement: vi.fn(),
 }));
 
 const PRODUCT = {
@@ -65,6 +94,15 @@ const SUPPLIER = {
   updatedAt: "2026-01-01T10:00:00.000Z",
 };
 
+const MOVEMENT = {
+  _id: "507f1f77bcf86cd799439013",
+  productId: "507f1f77bcf86cd799439011",
+  type: "IN" as const,
+  quantity: 5,
+  reason: "Compra inicial",
+  createdAt: "2026-01-01T10:00:00.000Z",
+};
+
 const CREATE_INPUT: CreateProductInput = {
   name: "Nuevo Producto",
   sku: "NEW-001",
@@ -80,6 +118,19 @@ describe("queryKeys", () => {
     ).toEqual(queryKeys.products.all);
     expect(
       queryKeys.movements.list.slice(0, queryKeys.movements.all.length),
+    ).toEqual(queryKeys.movements.all);
+  });
+
+  it("la clave de detalle y la de movimientos por producto viven bajo su dominio", () => {
+    expect(
+      queryKeys.products
+        .detail("507f1f77bcf86cd799439011")
+        .slice(0, queryKeys.products.all.length),
+    ).toEqual(queryKeys.products.all);
+    expect(
+      queryKeys.movements
+        .byProduct("507f1f77bcf86cd799439011")
+        .slice(0, queryKeys.movements.all.length),
     ).toEqual(queryKeys.movements.all);
   });
 
@@ -308,5 +359,331 @@ describe("deleteProductMutationOptions", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: queryKeys.products.all,
     });
+  });
+});
+
+describe("createCategoryMutationOptions", () => {
+  it("envía el input a createCategory y devuelve la categoría", async () => {
+    const client = new QueryClient();
+    vi.mocked(createCategory).mockResolvedValue(CATEGORY);
+    const options = createCategoryMutationOptions(client);
+    const input = { name: "Tecnología", description: "Electrónica y más" };
+
+    await expect(options.mutationFn(input)).resolves.toEqual(CATEGORY);
+
+    expect(createCategory).toHaveBeenCalledWith(input);
+  });
+
+  it("invalida la raíz de categorías al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createCategoryMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.categories.all,
+    });
+  });
+});
+
+describe("updateCategoryMutationOptions", () => {
+  it("envía id e input a updateCategory y devuelve la categoría", async () => {
+    const client = new QueryClient();
+    const updated = { ...CATEGORY, name: "Tecnología 2" };
+    vi.mocked(updateCategory).mockResolvedValue(updated);
+    const options = updateCategoryMutationOptions(client);
+
+    await expect(
+      options.mutationFn({ id: CATEGORY._id, input: { name: "Tecnología 2" } }),
+    ).resolves.toEqual(updated);
+
+    expect(updateCategory).toHaveBeenCalledWith(CATEGORY._id, {
+      name: "Tecnología 2",
+    });
+  });
+
+  it("invalida la raíz de categorías al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    updateCategoryMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.categories.all,
+    });
+  });
+});
+
+describe("deleteCategoryMutationOptions", () => {
+  it("envía el id a deleteCategory y devuelve la categoría archivada", async () => {
+    const client = new QueryClient();
+    const archived = { ...CATEGORY, deletedAt: "2026-02-01T10:00:00.000Z" };
+    vi.mocked(deleteCategory).mockResolvedValue(archived);
+    const options = deleteCategoryMutationOptions(client);
+
+    await expect(options.mutationFn(CATEGORY._id)).resolves.toEqual(archived);
+
+    expect(deleteCategory).toHaveBeenCalledWith(CATEGORY._id);
+  });
+
+  it("invalida la raíz de categorías al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    deleteCategoryMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.categories.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error("La categoría está en uso por productos");
+    vi.mocked(deleteCategory).mockRejectedValue(apiError);
+    const options = deleteCategoryMutationOptions(client);
+
+    await expect(options.mutationFn(CATEGORY._id)).rejects.toBe(apiError);
+  });
+});
+
+describe("createSupplierMutationOptions", () => {
+  it("envía el input a createSupplier y devuelve el proveedor", async () => {
+    const client = new QueryClient();
+    vi.mocked(createSupplier).mockResolvedValue(SUPPLIER);
+    const options = createSupplierMutationOptions(client);
+    const input = { name: "Acme", email: "contacto@acme.com" };
+
+    await expect(options.mutationFn(input)).resolves.toEqual(SUPPLIER);
+
+    expect(createSupplier).toHaveBeenCalledWith(input);
+  });
+
+  it("invalida la raíz de proveedores al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createSupplierMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.suppliers.all,
+    });
+  });
+});
+
+describe("updateSupplierMutationOptions", () => {
+  it("envía id e input a updateSupplier y devuelve el proveedor", async () => {
+    const client = new QueryClient();
+    const updated = { ...SUPPLIER, name: "Acme Internacional" };
+    vi.mocked(updateSupplier).mockResolvedValue(updated);
+    const options = updateSupplierMutationOptions(client);
+
+    await expect(
+      options.mutationFn({ id: SUPPLIER._id, input: { name: "Acme Internacional" } }),
+    ).resolves.toEqual(updated);
+
+    expect(updateSupplier).toHaveBeenCalledWith(SUPPLIER._id, {
+      name: "Acme Internacional",
+    });
+  });
+
+  it("invalida la raíz de proveedores al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    updateSupplierMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.suppliers.all,
+    });
+  });
+});
+
+describe("deleteSupplierMutationOptions", () => {
+  it("envía el id a deleteSupplier y devuelve el proveedor archivado", async () => {
+    const client = new QueryClient();
+    const archived = { ...SUPPLIER, deletedAt: "2026-02-01T10:00:00.000Z" };
+    vi.mocked(deleteSupplier).mockResolvedValue(archived);
+    const options = deleteSupplierMutationOptions(client);
+
+    await expect(options.mutationFn(SUPPLIER._id)).resolves.toEqual(archived);
+
+    expect(deleteSupplier).toHaveBeenCalledWith(SUPPLIER._id);
+  });
+
+  it("invalida la raíz de proveedores al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    deleteSupplierMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.suppliers.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error("El proveedor está en uso por productos");
+    vi.mocked(deleteSupplier).mockRejectedValue(apiError);
+    const options = deleteSupplierMutationOptions(client);
+
+    await expect(options.mutationFn(SUPPLIER._id)).rejects.toBe(apiError);
+  });
+});
+
+describe("createMovementMutationOptions", () => {
+  const MOVEMENT_INPUT: CreateStockMovementInput = {
+    productId: PRODUCT._id,
+    type: "IN",
+    quantity: 5,
+    reason: "Compra inicial",
+  };
+
+  it("envía el input a createMovement y devuelve el movimiento", async () => {
+    const client = new QueryClient();
+    vi.mocked(createMovement).mockResolvedValue(MOVEMENT);
+    const options = createMovementMutationOptions(client);
+
+    await expect(options.mutationFn(MOVEMENT_INPUT)).resolves.toEqual(MOVEMENT);
+
+    expect(createMovement).toHaveBeenCalledWith(MOVEMENT_INPUT);
+  });
+
+  it("invalida el historial global y el del producto afectado", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createMovementMutationOptions(client).onSuccess(MOVEMENT, MOVEMENT_INPUT);
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(4);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.movements.list,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.movements.byProduct(PRODUCT._id),
+    });
+  });
+
+  it("invalida la lista de productos y el detalle del producto afectado", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createMovementMutationOptions(client).onSuccess(MOVEMENT, MOVEMENT_INPUT);
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.products.list,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.products.detail(PRODUCT._id),
+    });
+  });
+
+  it("cubre el dashboard invalidando sólo las claves que consume (products.list y movements.list)", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createMovementMutationOptions(client).onSuccess(MOVEMENT, MOVEMENT_INPUT);
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map(
+      ([filters]) => filters?.queryKey,
+    );
+
+    expect(invalidatedKeys).toContainEqual(queryKeys.products.list);
+    expect(invalidatedKeys).toContainEqual(queryKeys.movements.list);
+    expect(invalidatedKeys).not.toContainEqual(queryKeys.categories.all);
+    expect(invalidatedKeys).not.toContainEqual(queryKeys.suppliers.all);
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error("El stock es insuficiente para realizar la salida");
+    vi.mocked(createMovement).mockRejectedValue(apiError);
+    const options = createMovementMutationOptions(client);
+
+    await expect(options.mutationFn(MOVEMENT_INPUT)).rejects.toBe(apiError);
+  });
+});
+
+describe("productQueryOptions", () => {
+  it("usa la clave de detalle del producto", () => {
+    expect(productQueryOptions(PRODUCT._id).queryKey).toEqual(
+      queryKeys.products.detail(PRODUCT._id),
+    );
+  });
+
+  it("delega el signal de TanStack Query en getProduct", async () => {
+    const options = productQueryOptions(PRODUCT._id);
+    const controller = new AbortController();
+    vi.mocked(getProduct).mockResolvedValue(PRODUCT);
+
+    await expect(
+      options.queryFn({ signal: controller.signal }),
+    ).resolves.toEqual(PRODUCT);
+
+    expect(getProduct).toHaveBeenCalledWith(PRODUCT._id, controller.signal);
+  });
+});
+
+describe("productMovementsQueryOptions", () => {
+  it("usa la clave de movimientos por producto", () => {
+    expect(productMovementsQueryOptions(PRODUCT._id).queryKey).toEqual(
+      queryKeys.movements.byProduct(PRODUCT._id),
+    );
+  });
+
+  it("delega el signal de TanStack Query en getMovementsByProduct", async () => {
+    const options = productMovementsQueryOptions(PRODUCT._id);
+    const controller = new AbortController();
+    vi.mocked(getMovementsByProduct).mockResolvedValue([]);
+
+    await expect(
+      options.queryFn({ signal: controller.signal }),
+    ).resolves.toEqual([]);
+
+    expect(getMovementsByProduct).toHaveBeenCalledWith(
+      PRODUCT._id,
+      controller.signal,
+    );
+  });
+});
+
+describe("isValidObjectId", () => {
+  it("acepta ids hexadecimales de 24 caracteres", () => {
+    expect(isValidObjectId("507f1f77bcf86cd799439011")).toBe(true);
+  });
+
+  it("rechaza ids con formato inválido", () => {
+    expect(isValidObjectId("")).toBe(false);
+    expect(isValidObjectId("nope")).toBe(false);
+    expect(isValidObjectId("507f1f77bcf86cd79943901z")).toBe(false);
+    expect(isValidObjectId("507f1f77bcf86cd79943901")).toBe(false);
+  });
+});
+
+describe("invalidación de la consulta de detalle", () => {
+  it("invalidar products.all marca como invalidada la key de detalle sin tocar movimientos", async () => {
+    const client = new QueryClient();
+    vi.mocked(getProduct).mockResolvedValue(PRODUCT);
+    vi.mocked(getMovements).mockResolvedValue([]);
+
+    await client.fetchQuery(productQueryOptions(PRODUCT._id));
+    await client.fetchQuery(movementsQueryOptions());
+
+    await client.invalidateQueries({ queryKey: queryKeys.products.all });
+
+    expect(
+      client.getQueryState(queryKeys.products.detail(PRODUCT._id))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(queryKeys.movements.list)?.isInvalidated,
+    ).toBe(false);
   });
 });

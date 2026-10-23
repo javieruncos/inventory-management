@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import type { ProductDTO } from "@/types/product";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/cn";
-import { getStockStatus, sortByCriticality } from "@/lib/dashboard";
+import { getLowStockAlerts, getStockStatus } from "@/lib/dashboard";
 
 type LowStockCardProps = {
   status: "loading" | "error" | "ready";
@@ -46,11 +47,7 @@ export function LowStockCard({
     );
   } else {
     const loadedProducts = products ?? [];
-    const alerts = sortByCriticality(
-      loadedProducts.filter(
-        (product) => getStockStatus(product) !== "normal",
-      ),
-    );
+    const { alerts, total, hasMore } = getLowStockAlerts(loadedProducts);
 
     if (loadedProducts.length === 0) {
       body = (
@@ -77,9 +74,12 @@ export function LowStockCard({
                   className="flex items-center justify-between gap-3 py-3"
                 >
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-body font-medium text-text">
+                    <Link
+                      href={`/products/${product._id}`}
+                      className="truncate text-body font-medium text-text hover:text-primary"
+                    >
                       {product.name}
-                    </span>
+                    </Link>
                     <span className="truncate text-caption text-text-secondary">
                       {product.sku} · Punto de reorden: {product.minimumStock}
                     </span>
@@ -103,9 +103,20 @@ export function LowStockCard({
               );
             })}
           </ul>
-          <p className="mt-4 text-caption text-text-secondary">
-            {attentionLabel(alerts.length)}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-caption text-text-secondary">
+              {attentionLabel(total)}
+            </p>
+            {hasMore ? (
+              <Link
+                href="/products"
+                aria-label="Ver todos los productos"
+                className="inline-flex h-10 items-center text-label text-primary hover:underline"
+              >
+                Ver todos
+              </Link>
+            ) : null}
+          </div>
         </>
       );
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
@@ -13,6 +14,7 @@ import {
   DEFAULT_RECENT_MOVEMENTS_LIMIT,
   filterMovements,
   getRecentMovements,
+  recentMovementsCountLabel,
   type MovementFilter,
 } from "@/lib/dashboard";
 
@@ -35,15 +37,10 @@ const FILTERS: ReadonlyArray<{ value: MovementFilter; label: string }> = [
 const dateFormat = new Intl.DateTimeFormat("es", {
   day: "2-digit",
   month: "short",
+  year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
 });
-
-function movementLabel(totalMovements: number): string {
-  return totalMovements === 1
-    ? "1 movimiento registrado"
-    : `${totalMovements} movimientos registrados`;
-}
 
 export function RecentMovementsCard({
   status,
@@ -110,9 +107,18 @@ export function RecentMovementsCard({
                     {isIn ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-body font-medium text-text">
-                      {productName}
-                    </span>
+                    {movement.product ? (
+                      <Link
+                        href={`/products/${movement.productId}`}
+                        className="truncate text-body font-medium text-text hover:text-primary"
+                      >
+                        {movement.product.name}
+                      </Link>
+                    ) : (
+                      <span className="truncate text-body font-medium text-text">
+                        {productName}
+                      </span>
+                    )}
                     <span className="truncate text-caption text-text-secondary">
                       {movement.reason} ·{" "}
                       {dateFormat.format(new Date(movement.createdAt))}
@@ -125,9 +131,20 @@ export function RecentMovementsCard({
               );
             })}
           </ul>
-          <p className="mt-4 text-caption text-text-secondary">
-            {movementLabel(totalMovements)}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-caption text-text-secondary">
+              {recentMovementsCountLabel(recent.length, filtered.length)}
+            </p>
+            {totalMovements > 0 ? (
+              <Link
+                href="/stock"
+                aria-label="Ver todos los movimientos de stock"
+                className="inline-flex h-10 items-center text-label text-primary hover:underline"
+              >
+                Ver todos
+              </Link>
+            ) : null}
+          </div>
         </>
       );
     }
@@ -154,7 +171,7 @@ export function RecentMovementsCard({
                 aria-pressed={filter === option.value}
                 onClick={() => setFilter(option.value)}
                 className={cn(
-                  "h-8 rounded-pill px-3 text-label",
+                  "h-11 rounded-pill px-3 text-label",
                   "transition-colors duration-150 ease-emphasized",
                   filter === option.value
                     ? "bg-primary-soft text-primary"

@@ -985,7 +985,7 @@ describe("updateProduct", () => {
     updateSpy.mockRestore();
   });
 
-  it("ignora un supplierId vacío", async () => {
+  it("desvincula el proveedor con supplierId vacío", async () => {
     const supplierSpy = vi.spyOn(SupplierModel, "exists");
     const updateSpy = vi.spyOn(
       ProductModel,
@@ -1000,6 +1000,7 @@ describe("updateProduct", () => {
     updateSpy.mockResolvedValue({
       _id: "64b000000000000000000007",
       name: "Nuevo nombre",
+      supplierId: null,
     } as unknown as Product);
 
     const result = await updateProduct("64b000000000000000000007", {
@@ -1011,12 +1012,92 @@ describe("updateProduct", () => {
     expect(supplierSpy).not.toHaveBeenCalled();
     expect(updateSpy).toHaveBeenCalledWith(
       { _id: "64b000000000000000000007", deletedAt: null },
-      { name: "Nuevo nombre" },
+      { name: "Nuevo nombre", supplierId: null },
       { new: true, runValidators: true },
     );
 
     supplierSpy.mockRestore();
     updateSpy.mockRestore();
+  });
+
+  it("desvincula el proveedor con supplierId null como único campo", async () => {
+    const supplierSpy = vi.spyOn(SupplierModel, "exists");
+    const updateSpy = vi.spyOn(
+      ProductModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Product | null>
+    >;
+    updateSpy.mockResolvedValue({
+      _id: "64b000000000000000000007",
+      supplierId: null,
+    } as unknown as Product);
+
+    const result = await updateProduct("64b000000000000000000007", {
+      supplierId: null,
+    });
+
+    expect(result).not.toBeNull();
+    expect(supplierSpy).not.toHaveBeenCalled();
+    expect(updateSpy).toHaveBeenCalledWith(
+      { _id: "64b000000000000000000007", deletedAt: null },
+      { supplierId: null },
+      { new: true, runValidators: true },
+    );
+
+    supplierSpy.mockRestore();
+    updateSpy.mockRestore();
+  });
+
+  it("rechaza un supplierId con formato inválido al actualizar", async () => {
+    let thrown: unknown;
+
+    try {
+      await updateProduct("64b000000000000000000007", {
+        supplierId: "no-es-un-oid",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.issues).toEqual([
+      {
+        path: "supplierId",
+        message: "Debe ser un ObjectId válido (24 caracteres hexadecimales)",
+      },
+    ]);
+  });
+
+  it("rechaza un supplierId con tipo inválido", async () => {
+    let thrown: unknown;
+
+    try {
+      await updateProduct("64b000000000000000000007", {
+        supplierId: 123,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        path: "supplierId",
+      }),
+    ]);
   });
 
   it("rechaza un SKU duplicado con CONFLICT", async () => {

@@ -3,11 +3,14 @@ import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
 import { ApiError, getMovements, getProducts } from "@/lib/api";
 import {
+  DEFAULT_LOW_STOCK_LIMIT,
   DEFAULT_RECENT_MOVEMENTS_LIMIT,
   attachProducts,
   filterMovements,
+  getLowStockAlerts,
   getRecentMovements,
   getStockStatus,
+  recentMovementsCountLabel,
   sortByCriticality,
   summarizeInventory,
 } from "@/lib/dashboard";
@@ -209,6 +212,87 @@ describe("sortByCriticality", () => {
   });
 });
 
+describe("getLowStockAlerts", () => {
+  it("filtra los productos normales y conserva la criticidad", () => {
+    const normal = makeProduct({
+      _id: makeId(0x6a),
+      currentStock: 20,
+      minimumStock: 0,
+    });
+    const low = makeProduct({
+      _id: makeId(0x6b),
+      currentStock: 3,
+      minimumStock: 5,
+    });
+    const out = makeProduct({
+      _id: makeId(0x6c),
+      currentStock: 0,
+      minimumStock: 5,
+    });
+
+    const result = getLowStockAlerts([normal, low, out]);
+
+    expect(result.alerts.map((product) => product._id)).toEqual([
+      out._id,
+      low._id,
+    ]);
+    expect(result.total).toBe(2);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("limita a seis alertas por defecto y marca que hay más", () => {
+    const products = Array.from(
+      { length: DEFAULT_LOW_STOCK_LIMIT + 1 },
+      (_, index) =>
+        makeProduct({
+          _id: makeId(0xa0 + index),
+          currentStock: 0,
+          minimumStock: 5,
+        }),
+    );
+
+    const result = getLowStockAlerts(products);
+
+    expect(result.alerts).toHaveLength(DEFAULT_LOW_STOCK_LIMIT);
+    expect(result.total).toBe(DEFAULT_LOW_STOCK_LIMIT + 1);
+    expect(result.hasMore).toBe(true);
+  });
+
+  it("respeta un límite configurable sin alterar el total", () => {
+    const products = [
+      makeProduct({
+        _id: makeId(0xb0),
+        currentStock: 0,
+        minimumStock: 5,
+      }),
+      makeProduct({
+        _id: makeId(0xb1),
+        currentStock: 1,
+        minimumStock: 5,
+      }),
+      makeProduct({
+        _id: makeId(0xb2),
+        currentStock: 2,
+        minimumStock: 5,
+      }),
+    ];
+
+    const result = getLowStockAlerts(products, { limit: 2 });
+
+    expect(result.alerts).toHaveLength(2);
+    expect(result.total).toBe(3);
+    expect(result.hasMore).toBe(true);
+  });
+
+  it("devuelve una lista vacía cuando todos los productos son normales", () => {
+    const result = getLowStockAlerts([
+      makeProduct({ currentStock: 20, minimumStock: 0 }),
+    ]);
+
+    expect(result).toEqual({ alerts: [], total: 0, hasMore: false });
+  });
+});
+
 describe("attachProducts", () => {
   it("asocia el producto disponible al movimiento", () => {
     const product = makeProduct();
@@ -379,6 +463,38 @@ describe("filterMovements", () => {
     expect(filterMovements([], "ALL")).toEqual([]);
     expect(filterMovements([], "IN")).toEqual([]);
     expect(filterMovements([], "OUT")).toEqual([]);
+  });
+});
+
+describe("recentMovementsCountLabel", () => {
+  it("usa el plural con varias cantidades", () => {
+    expect(recentMovementsCountLabel(5, 12)).toBe(
+      "Mostrando 5 de 12 movimientos",
+    );
+    expect(recentMovementsCountLabel(3, 7)).toBe(
+      "Mostrando 3 de 7 movimientos",
+    );
+    expect(recentMovementsCountLabel(2, 5)).toBe(
+      "Mostrando 2 de 5 movimientos",
+    );
+  });
+
+  it("usa el singular cuando hay un único movimiento", () => {
+    expect(recentMovementsCountLabel(1, 1)).toBe(
+      "Mostrando 1 de 1 movimiento",
+    );
+  });
+
+  it("muestra la cantidad visible cuando coincide con el total", () => {
+    expect(recentMovementsCountLabel(4, 4)).toBe(
+      "Mostrando 4 de 4 movimientos",
+    );
+  });
+
+  it("muestra la cantidad visible cuando es menor que el total", () => {
+    expect(recentMovementsCountLabel(6, 20)).toBe(
+      "Mostrando 6 de 20 movimientos",
+    );
   });
 });
 

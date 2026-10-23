@@ -7,18 +7,18 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { Plus, TriangleAlert } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { ProductsList } from "@/components/products/ProductsList";
 import { ProductsSkeleton } from "@/components/products/ProductsSkeleton";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
 import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { getStockStatus, type StockStatus } from "@/lib/dashboard";
 import { toViewStatus, useDeleteProduct, useProducts } from "@/lib/queries";
+import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { ProductDTO } from "@/types/product";
 
 type StatusFilter = "ALL" | StockStatus;
@@ -35,6 +35,16 @@ const FILTERS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
   { value: "outOfStock", label: "Agotado" },
 ];
 
+function deleteErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.kind === "CONFLICT" && error.message) return error.message;
+    if (error.kind === "NOT_FOUND") {
+      return "El registro ya no existe. Actualizá el listado.";
+    }
+  }
+  return "No se pudo completar la operación. Intentá nuevamente.";
+}
+
 export function ProductsView() {
   const productsQuery = useProducts();
   const deleteMutation = useDeleteProduct();
@@ -42,8 +52,6 @@ export function ProductsView() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [dialog, setDialog] = useState<DialogState>(null);
-  const [confirmDelete, setConfirmDelete] = useState<ProductDTO | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const listSectionRef = useRef<HTMLElement | null>(null);
 
@@ -62,35 +70,25 @@ export function ProductsView() {
     triggerRef.current?.focus();
   }, []);
 
-  const openDelete = (product: ProductDTO, trigger: HTMLElement) => {
-    triggerRef.current = trigger;
-    setDeleteError(null);
-    setConfirmDelete(product);
-  };
+  const handleDelete = async (product: ProductDTO) => {
+    const result = await confirmDelete({
+      title: "Eliminar producto",
+      text: `Se quitará "${product.name}" (SKU: ${product.sku}) del listado y del inventario. El registro se conservará archivado; no se elimina de forma permanente.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      onConfirm: async () => {
+        await deleteMutation.mutateAsync(product._id);
+      },
+    });
 
-  const cancelDelete = () => {
-    if (deleteMutation.isPending) return;
-    setConfirmDelete(null);
-    setDeleteError(null);
-    triggerRef.current?.focus();
-  };
+    if (result.status === "failed") {
+      await notifyError(deleteErrorMessage(result.error));
+      return;
+    }
 
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete || deleteMutation.isPending) return;
-
-    setDeleteError(null);
-
-    try {
-      await deleteMutation.mutateAsync(confirmDelete._id);
-      setConfirmDelete(null);
-      setDeleteError(null);
+    if (result.status === "confirmed") {
+      void notifySuccess("Producto eliminado");
       listSectionRef.current?.focus();
-    } catch (error) {
-      setDeleteError(
-        error instanceof ApiError
-          ? error.message
-          : "No se pudo eliminar el producto. Intentá nuevamente.",
-      );
     }
   };
 
@@ -165,7 +163,7 @@ export function ProductsView() {
                 aria-pressed={filter === option.value}
                 onClick={() => setFilter(option.value)}
                 className={cn(
-                  "h-8 rounded-pill px-3 text-label",
+                  "h-10 rounded-pill px-3 text-label",
                   "transition-colors duration-150 ease-emphasized",
                   filter === option.value
                     ? "bg-primary-soft text-primary"
@@ -189,7 +187,7 @@ export function ProductsView() {
             products={filtered}
             totalProducts={products.length}
             onEdit={openEdit}
-            onDelete={openDelete}
+            onDelete={handleDelete}
           />
         )}
       </>
@@ -200,10 +198,10 @@ export function ProductsView() {
     <>
       <div
         className="flex flex-col gap-5"
-        inert={dialog !== null || confirmDelete !== null}
+        inert={dialog !== null}
       >
         <PageHeader
-          title="Products"
+          title="Productos"
           subtitle="Catálogo de productos del inventario."
           actions={
             <Button onClick={openCreate}>
@@ -229,55 +227,6 @@ export function ProductsView() {
           product={dialog.mode === "edit" ? dialog.product : null}
           onClose={closeDialog}
         />
-      ) : null}
-      {confirmDelete ? (
-        <Dialog
-          title="Eliminar producto"
-          onClose={cancelDelete}
-          closeDisabled={deleteMutation.isPending}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-body font-medium text-text">
-                {confirmDelete.name}
-              </p>
-              <p className="text-caption text-text-secondary">
-                SKU: {confirmDelete.sku}
-              </p>
-            </div>
-            <p className="text-body text-text-secondary">
-              Se quitará del listado y del inventario. El registro se
-              conservará archivado; no se elimina de forma permanente.
-            </p>
-            {deleteError ? (
-              <p
-                role="alert"
-                className="flex items-start gap-1.5 text-body text-status-out-text"
-              >
-                <TriangleAlert
-                  aria-hidden="true"
-                  className="mt-px size-4 shrink-0"
-                />
-                <span>{deleteError}</span>
-              </p>
-            ) : null}
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={cancelDelete}
-                disabled={deleteMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmDelete}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Eliminando…" : "Eliminar"}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
       ) : null}
     </>
   );

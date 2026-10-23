@@ -805,11 +805,108 @@ describe("updateSupplier", () => {
     ]);
   });
 
-  it("rechaza un email vacío sin poder limpiar el campo", async () => {
+  it("limpia el email con cadena vacía", async () => {
+    const supplier = {
+      _id: "64b000000000000000000013",
+      email: null,
+    } as unknown as Supplier;
+    const updateSpy = vi.spyOn(
+      SupplierModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Supplier | null>
+    >;
+    updateSpy.mockResolvedValue(supplier);
+
+    const result = await updateSupplier("64b000000000000000000013", {
+      email: "",
+    });
+
+    expect(result).toBe(supplier);
+    expect(updateSpy).toHaveBeenCalledWith(
+      { _id: "64b000000000000000000013", deletedAt: null },
+      { email: null },
+      { new: true, runValidators: true },
+    );
+
+    updateSpy.mockRestore();
+  });
+
+  it("limpia el phone con cadena vacía", async () => {
+    const supplier = {
+      _id: "64b000000000000000000013",
+      phone: null,
+    } as unknown as Supplier;
+    const updateSpy = vi.spyOn(
+      SupplierModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Supplier | null>
+    >;
+    updateSpy.mockResolvedValue(supplier);
+
+    const result = await updateSupplier("64b000000000000000000013", {
+      phone: "",
+    });
+
+    expect(result).toBe(supplier);
+    expect(updateSpy).toHaveBeenCalledWith(
+      { _id: "64b000000000000000000013", deletedAt: null },
+      { phone: null },
+      { new: true, runValidators: true },
+    );
+
+    updateSpy.mockRestore();
+  });
+
+  it("limpia email y phone con null", async () => {
+    const supplier = {
+      _id: "64b000000000000000000013",
+      email: null,
+      phone: null,
+    } as unknown as Supplier;
+    const updateSpy = vi.spyOn(
+      SupplierModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Supplier | null>
+    >;
+    updateSpy.mockResolvedValue(supplier);
+
+    const result = await updateSupplier("64b000000000000000000013", {
+      email: null,
+      phone: null,
+    });
+
+    expect(result).toBe(supplier);
+    expect(updateSpy).toHaveBeenCalledWith(
+      { _id: "64b000000000000000000013", deletedAt: null },
+      { email: null, phone: null },
+      { new: true, runValidators: true },
+    );
+
+    updateSpy.mockRestore();
+  });
+
+  it("rechaza un email inválido al actualizar", async () => {
     let thrown: unknown;
 
     try {
-      await updateSupplier("64b000000000000000000013", { email: "" });
+      await updateSupplier("64b000000000000000000013", {
+        email: "no-email",
+      });
     } catch (error) {
       thrown = error;
     }
@@ -819,20 +916,21 @@ describe("updateSupplier", () => {
     const result = thrown as AppError;
 
     expect(result.kind).toBe("VALIDATION");
-    expect(result.message).toBe("Datos inválidos");
     expect(result.issues).toEqual([
       {
-        path: "",
-        message: "Debe enviar al menos un campo a actualizar",
+        path: "email",
+        message: "Debe ser un email válido",
       },
     ]);
   });
 
-  it("rechaza un phone vacío sin poder limpiar el campo", async () => {
+  it("rechaza un email de 255 caracteres al actualizar", async () => {
     let thrown: unknown;
 
     try {
-      await updateSupplier("64b000000000000000000013", { phone: "" });
+      await updateSupplier("64b000000000000000000013", {
+        email: "a".repeat(250) + "@x.co",
+      });
     } catch (error) {
       thrown = error;
     }
@@ -842,12 +940,34 @@ describe("updateSupplier", () => {
     const result = thrown as AppError;
 
     expect(result.kind).toBe("VALIDATION");
-    expect(result.message).toBe("Datos inválidos");
     expect(result.issues).toEqual([
       {
-        path: "",
-        message: "Debe enviar al menos un campo a actualizar",
+        path: "email",
+        message: "El email no puede superar 254 caracteres",
       },
+    ]);
+  });
+
+  it("rechaza un email con tipo inválido", async () => {
+    let thrown: unknown;
+
+    try {
+      await updateSupplier("64b000000000000000000013", {
+        email: 123,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("VALIDATION");
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        path: "email",
+      }),
     ]);
   });
 

@@ -53,7 +53,12 @@ export function Sidebar({
       >
         <ul className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => {
-            const isActive = item.href !== null && pathname === item.href;
+            const isActive =
+              item.href !== null &&
+              (item.href === "/"
+                ? pathname === item.href
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`));
             const ItemIcon = item.icon;
 
             const itemClasses = cn(

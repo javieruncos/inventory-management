@@ -9,7 +9,7 @@ export interface Product {
   currentStock: number;
   minimumStock: number;
   categoryId: Types.ObjectId;
-  supplierId?: Types.ObjectId;
+  supplierId?: Types.ObjectId | null;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -21,7 +21,6 @@ const productSchema = new Schema<Product>(
     sku: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -59,6 +58,15 @@ const productSchema = new Schema<Product>(
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true },
+);
+
+productSchema.index(
+  { sku: 1 },
+  {
+    unique: true,
+    name: "sku_active_unique",
+    partialFilterExpression: { deletedAt: null },
+  },
 );
 
 const ProductModel: Model<Product> =

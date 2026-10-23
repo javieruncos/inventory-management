@@ -80,6 +80,15 @@ describe("parseProductForm en modo edit", () => {
 
     expect(result.payload.supplierId).toBe("507f1f77bcf86cd799439013");
   });
+
+  it("envía supplierId vacío en edición para desvincular", () => {
+    const result = parseProductForm(VALID_VALUES, "edit");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.payload.supplierId).toBe("");
+  });
 });
 
 describe("parseProductForm pre-validaciones en español", () => {
