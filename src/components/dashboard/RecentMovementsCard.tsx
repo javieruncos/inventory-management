@@ -73,6 +73,7 @@ export function RecentMovementsCard({
     const recent = getRecentMovements(filtered, products ?? [], {
       limit: DEFAULT_RECENT_MOVEMENTS_LIMIT,
     });
+    const hasMoreMovements = filtered.length > recent.length;
 
     if (recent.length === 0) {
       body = (
@@ -135,7 +136,7 @@ export function RecentMovementsCard({
             <p className="text-caption text-text-secondary">
               {recentMovementsCountLabel(recent.length, filtered.length)}
             </p>
-            {totalMovements > 0 ? (
+            {hasMoreMovements ? (
               <Link
                 href="/stock"
                 aria-label="Ver todos los movimientos de stock"

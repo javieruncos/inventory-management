@@ -6,6 +6,7 @@ type PageHeaderProps = {
   subtitle?: string;
   actions?: ReactNode;
   className?: string;
+  actionsClassName?: string;
 };
 
 export function PageHeader({
@@ -13,6 +14,7 @@ export function PageHeader({
   subtitle,
   actions,
   className,
+  actionsClassName,
 }: PageHeaderProps) {
   return (
     <header
@@ -24,12 +26,21 @@ export function PageHeader({
       <div className="min-w-0">
         <h1 className="text-heading-lg text-text text-balance">{title}</h1>
         {subtitle ? (
-          <p className="mt-1 max-w-[65ch] text-body text-text-secondary text-pretty">
+          <p className="mt-1 max-w-[65ch] text-body text-text-subtitle text-pretty">
             {subtitle}
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
+      {actions ? (
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-3",
+            actionsClassName,
+          )}
+        >
+          {actions}
+        </div>
+      ) : null}
     </header>
   );
 }

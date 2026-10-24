@@ -43,6 +43,8 @@ export function Dashboard() {
   const hasNoProducts =
     productsStatus === "ready" && products !== null && products.length === 0;
 
+  const productsFailed = productsStatus === "error";
+
   const productsErrorMessage =
     productsStatus === "error"
       ? errorMessageOf(
@@ -84,6 +86,7 @@ export function Dashboard() {
             </LinkButton>
           </>
         }
+        actionsClassName="max-[767px]:w-full max-[767px]:flex-col max-[767px]:items-stretch"
       />
 
       {hasNoProducts ? (
@@ -145,7 +148,9 @@ export function Dashboard() {
 
           <div className="grid grid-cols-1 items-start gap-5 desktop:grid-cols-12">
             <RecentMovementsCard
-              className="desktop:col-span-7"
+              className={
+                productsFailed ? "desktop:col-span-12" : "desktop:col-span-7"
+              }
               status={movementsStatus}
               movements={movements}
               products={products}
@@ -153,13 +158,13 @@ export function Dashboard() {
               errorMessage={movementsErrorMessage}
               onRetry={retryMovements}
             />
-            <LowStockCard
-              className="desktop:col-span-5"
-              status={productsStatus}
-              products={products}
-              errorMessage={productsErrorMessage}
-              onRetry={retryProducts}
-            />
+            {productsFailed ? null : (
+              <LowStockCard
+                className="desktop:col-span-5"
+                status={productsStatus === "loading" ? "loading" : "ready"}
+                products={products}
+              />
+            )}
           </div>
         </>
       )}

@@ -3,17 +3,14 @@ import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import type { ProductDTO } from "@/types/product";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
-import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/cn";
 import { getLowStockAlerts, getStockStatus } from "@/lib/dashboard";
 
 type LowStockCardProps = {
-  status: "loading" | "error" | "ready";
+  status: "loading" | "ready";
   products: ProductDTO[] | null;
-  errorMessage?: string;
-  onRetry: () => void;
   className?: string;
 };
 
@@ -26,25 +23,12 @@ function attentionLabel(alertCount: number): string {
 export function LowStockCard({
   status,
   products,
-  errorMessage,
-  onRetry,
   className,
 }: LowStockCardProps) {
   let body: ReactNode;
 
   if (status === "loading") {
     body = <DashboardSkeleton variant="lowStock" />;
-  } else if (status === "error") {
-    body = (
-      <div role="alert" className="flex flex-col items-start gap-3 py-4">
-        <p className="text-body text-text-secondary">
-          {errorMessage ?? "No se pudieron cargar los productos."}
-        </p>
-        <Button variant="secondary" onClick={onRetry}>
-          Reintentar
-        </Button>
-      </div>
-    );
   } else {
     const loadedProducts = products ?? [];
     const { alerts, total, hasMore } = getLowStockAlerts(loadedProducts);

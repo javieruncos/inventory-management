@@ -33,7 +33,13 @@ export function Sidebar({
       )}
     >
       {/* Marca alineada con la altura del topbar (68px) */}
-      <div className="flex h-[68px] shrink-0 items-center gap-3 border-b border-border px-4">
+      <div
+        className={cn(
+          "flex h-[68px] shrink-0 items-center gap-3 border-b border-border px-4",
+          variant === "rail" &&
+            "max-desktop:justify-center max-desktop:px-0",
+        )}
+      >
         <span
           aria-hidden="true"
           className="grid size-9 shrink-0 place-items-center rounded-control bg-primary-soft text-primary"
