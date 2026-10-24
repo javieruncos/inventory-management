@@ -122,21 +122,25 @@ export function Dashboard() {
                   ? (
                     <>
                       <StatCard
+                        compactOnMobile
                         icon={<Package size={18} />}
                         label="Productos totales"
                         value={numberFormat.format(summary.totalProducts)}
                       />
                       <StatCard
+                        compactOnMobile
                         icon={<Layers size={18} />}
                         label="Unidades en stock"
                         value={numberFormat.format(summary.totalUnits)}
                       />
                       <StatCard
+                        compactOnMobile
                         icon={<TriangleAlert size={18} />}
                         label="Stock bajo"
                         value={numberFormat.format(summary.lowStockCount)}
                       />
                       <StatCard
+                        compactOnMobile
                         icon={<ArchiveX size={18} />}
                         label="Stock agotado"
                         value={numberFormat.format(summary.outOfStockCount)}

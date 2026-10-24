@@ -15,12 +15,23 @@ export function DashboardSkeleton({
 }: DashboardSkeletonProps) {
   if (variant === "kpis") {
     return (
-      <div className={cn("flex flex-col gap-3", className)} aria-hidden="true">
-        <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          "flex flex-col gap-3 max-[767px]:flex-row max-[767px]:items-center max-[767px]:gap-3",
+          className,
+        )}
+        aria-hidden="true"
+      >
+        <div className="flex min-w-0 items-center gap-3 max-[767px]:flex-1">
           <span className={cn("size-9 shrink-0 rounded-control", pulseClass)} />
-          <span className={cn("h-4 w-28 rounded-sm", pulseClass)} />
+          <span className={cn("h-4 w-28 max-w-full rounded-sm", pulseClass)} />
         </div>
-        <span className={cn("h-8 w-20 rounded-sm", pulseClass)} />
+        <span
+          className={cn(
+            "h-8 w-20 rounded-sm max-[767px]:w-16 max-[767px]:shrink-0",
+            pulseClass,
+          )}
+        />
       </div>
     );
   }
