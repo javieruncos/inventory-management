@@ -7,7 +7,7 @@ import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { TrendPill } from "@/components/ui/TrendPill";
 import { cn } from "@/lib/cn";
 import {
@@ -156,35 +156,39 @@ export function RecentMovementsCard({
       aria-busy={status === "loading"}
       className={cn("min-w-0", className)}
     >
-      <CardHeader
-        title="Movimientos recientes"
-        description="Últimos cambios de stock registrados."
-        actions={
-          <div
-            role="group"
-            aria-label="Filtrar movimientos"
-            className="flex flex-wrap items-center gap-2"
-          >
-            {FILTERS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={filter === option.value}
-                onClick={() => setFilter(option.value)}
-                className={cn(
-                  "h-11 rounded-pill px-3 text-label",
-                  "transition-colors duration-150 ease-emphasized",
-                  filter === option.value
-                    ? "bg-primary-soft text-primary"
-                    : "text-neutral hover:bg-surface-nested",
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        }
-      />
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-heading-sm text-text text-balance">
+            Movimientos recientes
+          </h2>
+          <p className="mt-1 max-w-prose text-body-sm text-text-secondary text-pretty">
+            Últimos cambios de stock registrados.
+          </p>
+        </div>
+        <div
+          role="group"
+          aria-label="Filtrar movimientos"
+          className="flex w-full flex-wrap items-center justify-between gap-2 md:w-auto md:justify-start"
+        >
+          {FILTERS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={filter === option.value}
+              onClick={() => setFilter(option.value)}
+              className={cn(
+                "h-11 rounded-pill px-3 text-label",
+                "transition-colors duration-150 ease-emphasized",
+                filter === option.value
+                  ? "bg-primary-soft text-primary"
+                  : "text-neutral hover:bg-surface-nested",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
       {body}
     </Card>
   );
