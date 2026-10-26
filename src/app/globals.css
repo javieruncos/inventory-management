@@ -8,10 +8,10 @@
  * + margen mobile 16px (= p-4).
  */
 @theme inline {
-  /* Familia temporal (Fase 1): system-ui. Plus Jakarta Sans se evaluará después. */
+  /* Tipografía principal (DESIGN.md §4.1). */
   --font-sans:
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+    var(--font-plus-jakarta-sans), system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* --- Colors: superficies y bordes (DESIGN.md §5.1, §6) --- */
   --color-canvas: #f6f8fc;
