@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { ApiError } from "@/lib/api";
 import type { FieldIssue } from "@/lib/errors";
 import { toViewStatus, useCreateMovement, useProducts } from "@/lib/queries";
+import { notifySuccess } from "@/lib/sweetAlert";
 import { createStockMovementSchema } from "@/schemas/stockMovement";
 import type { ProductDTO } from "@/types/product";
 
@@ -176,6 +177,9 @@ export function MovementFormDialog({
 
     try {
       await createMutation.mutateAsync(result.data);
+      void notifySuccess(
+        result.data.type === "IN" ? "Entrada registrada" : "Salida registrada",
+      );
       onClose();
     } catch (error) {
       if (error instanceof ApiError) handleApiError(error);
