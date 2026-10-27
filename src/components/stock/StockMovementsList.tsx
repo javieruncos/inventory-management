@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { TrendPill } from "@/components/ui/TrendPill";
 import type { MovementWithProduct } from "@/lib/dashboard";
@@ -93,9 +94,18 @@ export function StockMovementsList({
                 className="transition-colors hover:bg-surface-nested"
               >
                 <td className="py-3 pl-0 pr-4 align-middle">
-                  <span className="block truncate font-medium text-text">
-                    {productNameOf(movement)}
-                  </span>
+                  {movement.product ? (
+                    <Link
+                      href={`/products/${movement.productId}`}
+                      className="block truncate font-medium text-text hover:text-primary"
+                    >
+                      {movement.product.name}
+                    </Link>
+                  ) : (
+                    <span className="block truncate font-medium text-text">
+                      {productNameOf(movement)}
+                    </span>
+                  )}
                 </td>
                 <td className="py-3 pl-4 pr-4 align-middle">
                   <span className="flex items-center gap-2">
@@ -117,9 +127,17 @@ export function StockMovementsList({
                   </TrendPill>
                 </td>
                 <td className="py-3 pl-4 pr-4 align-middle">
-                  <span className="block truncate text-text-secondary">
-                    {movement.reason}
-                  </span>
+                  <details className="group min-w-0">
+                    <summary className="flex min-h-6 cursor-pointer list-none items-center gap-1 py-0.5 text-text-secondary [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0 flex-1 truncate group-open:whitespace-pre-wrap group-open:overflow-visible group-open:break-words group-open:text-clip">
+                        {movement.reason}
+                      </span>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="size-3.5 shrink-0 transition-transform duration-150 ease-emphasized group-open:rotate-180"
+                      />
+                    </summary>
+                  </details>
                 </td>
                 <td className="py-3 pl-4 pr-0 text-right align-middle">
                   <time
@@ -144,7 +162,16 @@ export function StockMovementsList({
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex items-start justify-between gap-3">
                     <p className="truncate text-body font-medium text-text">
-                      {productNameOf(movement)}
+                      {movement.product ? (
+                        <Link
+                          href={`/products/${movement.productId}`}
+                          className="hover:text-primary"
+                        >
+                          {movement.product.name}
+                        </Link>
+                      ) : (
+                        productNameOf(movement)
+                      )}
                     </p>
                     <TrendPill
                       direction={movement.type === "IN" ? "up" : "down"}
@@ -152,9 +179,17 @@ export function StockMovementsList({
                       {quantityLabel(movement)}
                     </TrendPill>
                   </div>
-                  <p className="truncate text-caption text-text-secondary">
-                    {typeLabel(movement)} · {movement.reason}
-                  </p>
+                  <details className="group min-w-0">
+                    <summary className="flex min-h-6 cursor-pointer list-none items-center gap-1 py-0.5 text-caption text-text-secondary [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0 flex-1 truncate group-open:whitespace-pre-wrap group-open:overflow-visible group-open:break-words group-open:text-clip">
+                        {typeLabel(movement)} · {movement.reason}
+                      </span>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="size-3.5 shrink-0 transition-transform duration-150 ease-emphasized group-open:rotate-180"
+                      />
+                    </summary>
+                  </details>
                   <time
                     dateTime={movement.createdAt}
                     className="truncate text-caption text-text-secondary"
