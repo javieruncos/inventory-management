@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { ApiError } from "@/lib/api";
 import type { FieldIssue } from "@/lib/errors";
 import { toViewStatus, useCreateMovement, useProducts } from "@/lib/queries";
+import { notifySuccess } from "@/lib/sweetAlert";
 import { createStockMovementSchema } from "@/schemas/stockMovement";
 import type { ProductDTO } from "@/types/product";
 
@@ -107,6 +108,9 @@ export function MovementFormDialog({
     product === undefined &&
     productsStatus === "ready" &&
     products.length === 0;
+  const productCatalogUnavailable =
+    product === undefined && productsStatus !== "ready";
+  const canSubmit = !isPending && !noProducts && !productCatalogUnavailable;
 
   const applyFieldErrors = (
     errors: MovementFormErrors,
@@ -131,7 +135,7 @@ export function MovementFormDialog({
   };
 
   const onSubmit = handleSubmit(async () => {
-    if (isPending) return;
+    if (!canSubmit) return;
 
     clearErrors();
     setFormError(null);
@@ -176,6 +180,9 @@ export function MovementFormDialog({
 
     try {
       await createMutation.mutateAsync(result.data);
+      void notifySuccess(
+        result.data.type === "IN" ? "Entrada registrada" : "Salida registrada",
+      );
       onClose();
     } catch (error) {
       if (error instanceof ApiError) handleApiError(error);
@@ -239,9 +246,11 @@ export function MovementFormDialog({
                   required
                   error={fieldState.error?.message}
                   hint={
-                    productsStatus === "error"
-                      ? "No se pudieron cargar los productos."
-                      : undefined
+                    productsStatus === "loading"
+                      ? "Cargando productos…"
+                      : productsStatus === "error"
+                        ? "No se pudieron cargar los productos."
+                        : undefined
                   }
                   selectProps={{
                     value: field.value,
@@ -345,7 +354,7 @@ export function MovementFormDialog({
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isPending || noProducts}>
+          <Button type="submit" disabled={!canSubmit}>
             {isPending ? "Registrando…" : "Registrar"}
           </Button>
         </div>

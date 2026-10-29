@@ -41,7 +41,7 @@ export function FormField({
         aria-describedby={describedBy}
         className={cn(
           /* text-base en mobile evita el zoom de iOS (<16px); 14px desde tablet */
-          "h-10 w-full rounded-control border bg-surface px-3 text-base text-text placeholder:text-text-muted md:text-body",
+          "h-10 w-full rounded-control border bg-surface px-3 text-base text-text placeholder:text-text-secondary md:text-body",
           error ? "border-status-out-text" : "border-border-strong",
         )}
         {...inputProps}

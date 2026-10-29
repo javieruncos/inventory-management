@@ -31,7 +31,7 @@ export function CardHeader({ title, description, actions }: CardHeaderProps) {
       <div className="min-w-0">
         <h2 className="text-heading-sm text-text text-balance">{title}</h2>
         {description ? (
-          <p className="mt-1 text-body-sm text-text-secondary text-pretty">
+          <p className="mt-1 max-w-prose text-body-sm text-text-secondary text-pretty">
             {description}
           </p>
         ) : null}

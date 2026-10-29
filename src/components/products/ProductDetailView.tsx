@@ -7,6 +7,7 @@ import {
   ArrowDown,
   ArrowLeftRight,
   ArrowUp,
+  ChevronDown,
   ChevronLeft,
   DollarSign,
   Layers,
@@ -219,15 +220,23 @@ function MovementRow({ movement }: MovementRowProps) {
       >
         {isIn ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
       </span>
-      <span className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body font-medium text-text">
           {isIn ? "Entrada" : "Salida"}
         </span>
-        <span className="truncate text-caption text-text-secondary">
-          {movement.reason} ·{" "}
-          {dateFormat.format(new Date(movement.createdAt))}
-        </span>
-      </span>
+        <details className="group min-w-0">
+          <summary className="flex min-h-6 cursor-pointer list-none items-center gap-1 py-0.5 text-caption text-text-secondary [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1 truncate group-open:whitespace-pre-wrap group-open:overflow-visible group-open:break-words group-open:text-clip">
+              {movement.reason} ·{" "}
+              {dateFormat.format(new Date(movement.createdAt))}
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              className="size-3.5 shrink-0 transition-transform duration-150 ease-emphasized group-open:rotate-180"
+            />
+          </summary>
+        </details>
+      </div>
       <TrendPill direction={isIn ? "up" : "down"}>
         {`${isIn ? "+" : "-"}${movement.quantity} un.`}
       </TrendPill>

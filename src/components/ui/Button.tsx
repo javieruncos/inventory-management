@@ -28,6 +28,7 @@ export function Button({
       className={cn(
         "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-control px-5 text-label whitespace-nowrap",
         "transition-colors duration-150 ease-emphasized",
+        "active:translate-y-px motion-reduce:active:translate-y-0",
         "disabled:pointer-events-none disabled:opacity-50",
         variantClasses[variant],
         className,

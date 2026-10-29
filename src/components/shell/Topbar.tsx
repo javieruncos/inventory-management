@@ -22,8 +22,6 @@ export function Topbar({ onOpenMenu, menuRef, menuOpen }: TopbarProps) {
         className="md:hidden"
         onClick={onOpenMenu}
       />
-      {/* Slot preparado para futuras extensiones del topbar. */}
-      <div className="ml-auto flex items-center gap-3" />
     </header>
   );
 }
