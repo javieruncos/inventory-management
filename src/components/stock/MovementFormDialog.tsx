@@ -108,6 +108,9 @@ export function MovementFormDialog({
     product === undefined &&
     productsStatus === "ready" &&
     products.length === 0;
+  const productCatalogUnavailable =
+    product === undefined && productsStatus !== "ready";
+  const canSubmit = !isPending && !noProducts && !productCatalogUnavailable;
 
   const applyFieldErrors = (
     errors: MovementFormErrors,
@@ -132,7 +135,7 @@ export function MovementFormDialog({
   };
 
   const onSubmit = handleSubmit(async () => {
-    if (isPending) return;
+    if (!canSubmit) return;
 
     clearErrors();
     setFormError(null);
@@ -243,9 +246,11 @@ export function MovementFormDialog({
                   required
                   error={fieldState.error?.message}
                   hint={
-                    productsStatus === "error"
-                      ? "No se pudieron cargar los productos."
-                      : undefined
+                    productsStatus === "loading"
+                      ? "Cargando productos…"
+                      : productsStatus === "error"
+                        ? "No se pudieron cargar los productos."
+                        : undefined
                   }
                   selectProps={{
                     value: field.value,
@@ -349,7 +354,7 @@ export function MovementFormDialog({
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isPending || noProducts}>
+          <Button type="submit" disabled={!canSubmit}>
             {isPending ? "Registrando…" : "Registrar"}
           </Button>
         </div>

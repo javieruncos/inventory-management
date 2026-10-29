@@ -317,36 +317,53 @@ export function ProductFormDialog({
                   </Link>
                 </div>
               ) : (
-                <Select
-                  id="product-category"
-                  label="Categoría"
-                  required
-                  error={
-                    fieldState.error?.message ??
-                    (categoriesStatus === "error"
-                      ? "No se pudieron cargar las categorías."
-                      : undefined)
-                  }
-                  hint={
-                    noCategories ? "No hay categorías disponibles." : undefined
-                  }
-                  selectProps={{
-                    value: field.value,
-                    onChange: field.onChange,
-                    onBlur: field.onBlur,
-                    disabled: isPending || categoriesStatus !== "ready",
-                  }}
-                >
-                  <option value="">Seleccionar categoría</option>
-                  {categoryMissing ? (
-                    <option value={field.value}>Categoría actual</option>
+                <div className="flex flex-col gap-2 self-stretch">
+                  <Select
+                    id="product-category"
+                    label="Categoría"
+                    required
+                    error={
+                      fieldState.error?.message ??
+                      (categoriesStatus === "error"
+                        ? "No se pudieron cargar las categorías."
+                        : undefined)
+                    }
+                    hint={
+                      categoriesStatus === "loading"
+                        ? "Cargando categorías…"
+                        : noCategories
+                          ? "No hay categorías disponibles."
+                          : undefined
+                    }
+                    selectProps={{
+                      value: field.value,
+                      onChange: field.onChange,
+                      onBlur: field.onBlur,
+                      disabled: isPending || categoriesStatus !== "ready",
+                    }}
+                  >
+                    <option value="">Seleccionar categoría</option>
+                    {categoryMissing ? (
+                      <option value={field.value}>Categoría actual</option>
+                    ) : null}
+                    {categories.map((category) => (
+                      <option key={category._id} value={category._id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </Select>
+                  {categoriesStatus === "error" ? (
+                    <div>
+                      <Button
+                        variant="secondary"
+                        aria-label="Reintentar categorías"
+                        onClick={() => void categoriesQuery.refetch()}
+                      >
+                        Reintentar
+                      </Button>
+                    </div>
                   ) : null}
-                  {categories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </Select>
+                </div>
               )
             }
           />
@@ -355,32 +372,47 @@ export function ProductFormDialog({
             control={control}
             name="supplierId"
             render={({ field, fieldState }) => (
-              <Select
-                id="product-supplier"
-                label="Proveedor"
-                error={fieldState.error?.message}
-                hint={
-                  suppliersStatus === "error"
-                    ? "No se pudieron cargar los proveedores."
-                    : undefined
-                }
-                selectProps={{
-                  value: field.value,
-                  onChange: field.onChange,
-                  onBlur: field.onBlur,
-                  disabled: isPending || suppliersStatus !== "ready",
-                }}
-              >
-                <option value="">Sin proveedor</option>
-                {supplierMissing ? (
-                  <option value={field.value}>Proveedor actual</option>
+              <div className="flex flex-col gap-2 self-stretch">
+                <Select
+                  id="product-supplier"
+                  label="Proveedor"
+                  error={fieldState.error?.message}
+                  hint={
+                    suppliersStatus === "loading"
+                      ? "Cargando proveedores…"
+                      : suppliersStatus === "error"
+                        ? "No se pudieron cargar los proveedores."
+                        : undefined
+                  }
+                  selectProps={{
+                    value: field.value,
+                    onChange: field.onChange,
+                    onBlur: field.onBlur,
+                    disabled: isPending || suppliersStatus !== "ready",
+                  }}
+                >
+                  <option value="">Sin proveedor</option>
+                  {supplierMissing ? (
+                    <option value={field.value}>Proveedor actual</option>
+                  ) : null}
+                  {suppliers.map((supplier) => (
+                    <option key={supplier._id} value={supplier._id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </Select>
+                {suppliersStatus === "error" ? (
+                  <div>
+                    <Button
+                      variant="secondary"
+                      aria-label="Reintentar proveedores"
+                      onClick={() => void suppliersQuery.refetch()}
+                    >
+                      Reintentar
+                    </Button>
+                  </div>
                 ) : null}
-                {suppliers.map((supplier) => (
-                  <option key={supplier._id} value={supplier._id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </Select>
+              </div>
             )}
           />
         </div>
