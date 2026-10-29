@@ -158,6 +158,7 @@ export function Dashboard() {
               status={movementsStatus}
               movements={movements}
               products={products}
+              productsStatus={productsStatus}
               totalMovements={movements ? movements.length : 0}
               errorMessage={movementsErrorMessage}
               onRetry={retryMovements}

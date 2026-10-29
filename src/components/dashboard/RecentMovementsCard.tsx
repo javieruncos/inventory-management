@@ -22,11 +22,32 @@ type RecentMovementsCardProps = {
   status: "loading" | "error" | "ready";
   movements: StockMovementDTO[] | null;
   products: ProductDTO[] | null;
+  productsStatus: "loading" | "error" | "ready";
   totalMovements: number;
   errorMessage?: string;
   onRetry: () => void;
   className?: string;
 };
+
+type ProductNamesNoticeProps = {
+  status: "loading" | "error";
+};
+
+function ProductNamesNotice({ status }: ProductNamesNoticeProps) {
+  if (status === "loading") {
+    return (
+      <p role="status" className="mb-3 text-caption text-text-secondary">
+        Cargando nombres de productos…
+      </p>
+    );
+  }
+
+  return (
+    <p className="mb-3 text-caption text-text-secondary">
+      Los nombres de productos no están disponibles.
+    </p>
+  );
+}
 
 const FILTERS: ReadonlyArray<{ value: MovementFilter; label: string }> = [
   { value: "ALL", label: "Todos" },
@@ -46,12 +67,18 @@ export function RecentMovementsCard({
   status,
   movements,
   products,
+  productsStatus,
   totalMovements,
   errorMessage,
   onRetry,
   className,
 }: RecentMovementsCardProps) {
   const [filter, setFilter] = useState<MovementFilter>("ALL");
+  const filtered = filterMovements(movements ?? [], filter);
+  const recent = getRecentMovements(filtered, products ?? [], {
+    limit: DEFAULT_RECENT_MOVEMENTS_LIMIT,
+  });
+  const hasMoreMovements = filtered.length > recent.length;
 
   let body: ReactNode;
 
@@ -69,12 +96,6 @@ export function RecentMovementsCard({
       </div>
     );
   } else {
-    const filtered = filterMovements(movements ?? [], filter);
-    const recent = getRecentMovements(filtered, products ?? [], {
-      limit: DEFAULT_RECENT_MOVEMENTS_LIMIT,
-    });
-    const hasMoreMovements = filtered.length > recent.length;
-
     if (recent.length === 0) {
       body = (
         <p className="py-4 text-body text-text-secondary">
@@ -86,13 +107,19 @@ export function RecentMovementsCard({
     } else {
       body = (
         <>
+          {productsStatus !== "ready" ? (
+            <ProductNamesNotice status={productsStatus} />
+          ) : null}
           <ul className="divide-y divide-divider">
             {recent.map((movement) => {
               const isIn = movement.type === "IN";
               const productName =
-                products === null
-                  ? "—"
-                  : (movement.product?.name ?? "Producto no disponible");
+                movement.product?.name ??
+                (productsStatus === "loading"
+                  ? "Cargando…"
+                  : productsStatus === "error"
+                    ? "Nombre no disponible"
+                    : "Producto no disponible");
 
               return (
                 <li key={movement._id} className="flex items-center gap-3 py-3">
@@ -161,7 +188,12 @@ export function RecentMovementsCard({
 
   return (
     <Card
-      aria-busy={status === "loading"}
+      aria-busy={
+        status === "loading" ||
+        (status === "ready" &&
+          productsStatus === "loading" &&
+          recent.length > 0)
+      }
       className={cn("min-w-0", className)}
     >
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

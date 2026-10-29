@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 type StockMovementsListProps = {
   movements: MovementWithProduct[];
   totalMovements: number;
+  productsStatus: "loading" | "error" | "ready";
 };
 
 const dateFormat = new Intl.DateTimeFormat("es", {
@@ -16,8 +17,12 @@ const dateFormat = new Intl.DateTimeFormat("es", {
   year: "numeric",
 });
 
-function productNameOf(movement: MovementWithProduct): string {
-  return movement.product?.name ?? "Producto no disponible";
+function unavailableProductName(
+  productsStatus: StockMovementsListProps["productsStatus"],
+): string {
+  if (productsStatus === "loading") return "Cargando producto…";
+  if (productsStatus === "error") return "Nombre no disponible";
+  return "Producto no disponible";
 }
 
 function typeLabel(movement: MovementWithProduct): string {
@@ -59,6 +64,7 @@ function TypeMark({ movement }: { movement: MovementWithProduct }) {
 export function StockMovementsList({
   movements,
   totalMovements,
+  productsStatus,
 }: StockMovementsListProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -103,7 +109,7 @@ export function StockMovementsList({
                     </Link>
                   ) : (
                     <span className="block truncate font-medium text-text">
-                      {productNameOf(movement)}
+                      {unavailableProductName(productsStatus)}
                     </span>
                   )}
                 </td>
@@ -170,7 +176,7 @@ export function StockMovementsList({
                           {movement.product.name}
                         </Link>
                       ) : (
-                        productNameOf(movement)
+                        unavailableProductName(productsStatus)
                       )}
                     </p>
                     <TrendPill
