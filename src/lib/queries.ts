@@ -5,6 +5,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import {
+  ApiError,
   createCategory,
   createMovement,
   createProduct,
@@ -13,18 +14,23 @@ import {
   deleteProduct,
   deleteSupplier,
   getCategories,
+  getMe,
   getMovements,
   getMovementsByProduct,
   getProduct,
   getProducts,
   getSuppliers,
+  login,
+  logout,
   updateCategory,
   updateProduct,
   updateSupplier,
+  type AuthUser,
   type UpdateCategoryInput,
   type UpdateProductInput,
   type UpdateSupplierInput,
 } from "@/lib/api";
+import type { LoginInput } from "@/schemas/auth";
 import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
@@ -32,6 +38,10 @@ import type { CreateSupplierInput } from "@/schemas/supplier";
 import type { StockMovementDTO } from "@/types/stockMovement";
 
 export const queryKeys = {
+  auth: {
+    all: ["auth"] as const,
+    me: ["auth", "me"] as const,
+  },
   products: {
     all: ["products"] as const,
     list: ["products", "list"] as const,
@@ -73,6 +83,79 @@ export function toViewStatus(query: QuerySnapshot): QueryViewStatus {
   if (query.isFetching) return "loading";
   if (query.isError) return "error";
   return "loading";
+}
+
+export function meQueryOptions() {
+  return {
+    queryKey: queryKeys.auth.me,
+    queryFn: async ({
+      signal,
+    }: {
+      signal: AbortSignal;
+    }): Promise<AuthUser | null> => {
+      try {
+        return await getMe(signal);
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          (error.status === 401 || error.kind === "UNAUTHORIZED")
+        ) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  };
+}
+
+export function useMe() {
+  return useQuery(meQueryOptions());
+}
+
+export function loginMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (input: LoginInput) => login(input),
+    onSuccess: (user: AuthUser) => {
+      queryClient.setQueryData(queryKeys.auth.me, user);
+    },
+  };
+}
+
+export function useLogin() {
+  const queryClient = useQueryClient();
+  return useMutation(loginMutationOptions(queryClient));
+}
+
+export function logoutMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: () => logout(),
+    onSuccess: async () => {
+      // 1. Cancelar cualquier consulta en curso de datos privados
+      // para evitar que respuestas demoradas reintroduzcan datos en caché.
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: queryKeys.products.all }),
+        queryClient.cancelQueries({ queryKey: queryKeys.movements.all }),
+        queryClient.cancelQueries({ queryKey: queryKeys.categories.all }),
+        queryClient.cancelQueries({ queryKey: queryKeys.suppliers.all }),
+      ]);
+
+      // 2. Establecer sesión anónima explícita
+      queryClient.setQueryData(queryKeys.auth.me, null);
+
+      // 3. Purgar las queries privadas de la memoria
+      queryClient.removeQueries({ queryKey: queryKeys.products.all });
+      queryClient.removeQueries({ queryKey: queryKeys.movements.all });
+      queryClient.removeQueries({ queryKey: queryKeys.categories.all });
+      queryClient.removeQueries({ queryKey: queryKeys.suppliers.all });
+    },
+  };
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation(logoutMutationOptions(queryClient));
 }
 
 export function productsQueryOptions() {

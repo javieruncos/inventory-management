@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import {
+  ApiError,
   createCategory,
   createMovement,
   createProduct,
@@ -9,15 +10,20 @@ import {
   deleteProduct,
   deleteSupplier,
   getCategories,
+  getMe,
   getMovements,
   getMovementsByProduct,
   getProduct,
   getProducts,
   getSuppliers,
+  login,
+  logout,
   updateCategory,
   updateProduct,
   updateSupplier,
+  type AuthUser,
 } from "@/lib/api";
+import type { LoginInput } from "@/schemas/auth";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import {
@@ -30,6 +36,9 @@ import {
   deleteProductMutationOptions,
   deleteSupplierMutationOptions,
   isValidObjectId,
+  loginMutationOptions,
+  logoutMutationOptions,
+  meQueryOptions,
   movementsQueryOptions,
   productMovementsQueryOptions,
   productQueryOptions,
@@ -43,7 +52,10 @@ import {
   updateSupplierMutationOptions,
 } from "@/lib/queries";
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+  return {
+    ...actual,
   getProducts: vi.fn(),
   getProduct: vi.fn(),
   getMovements: vi.fn(),
@@ -60,7 +72,11 @@ vi.mock("@/lib/api", () => ({
   updateSupplier: vi.fn(),
   deleteSupplier: vi.fn(),
   createMovement: vi.fn(),
-}));
+  getMe: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
+  };
+});
 
 const PRODUCT = {
   _id: "507f1f77bcf86cd799439011",
@@ -111,6 +127,12 @@ const CREATE_INPUT: CreateProductInput = {
   supplierId: undefined,
 };
 
+const AUTH_USER: AuthUser = {
+  id: "507f1f77bcf86cd799439011",
+  email: "admin@example.com",
+  role: "admin",
+};
+
 describe("queryKeys", () => {
   it("la clave de lista vive bajo el prefijo de su dominio", () => {
     expect(
@@ -137,6 +159,12 @@ describe("queryKeys", () => {
   it("los dominios de productos y movimientos son distintos", () => {
     expect(queryKeys.products.all).not.toEqual(queryKeys.movements.all);
     expect(queryKeys.products.list).not.toEqual(queryKeys.movements.list);
+  });
+
+  it("la clave de sesión de auth vive bajo el prefijo auth", () => {
+    expect(queryKeys.auth.me.slice(0, queryKeys.auth.all.length)).toEqual(
+      queryKeys.auth.all,
+    );
   });
 });
 
@@ -238,6 +266,7 @@ describe("queryKeys de categorías y proveedores", () => {
       queryKeys.movements.all,
       queryKeys.categories.all,
       queryKeys.suppliers.all,
+      queryKeys.auth.all,
     ];
 
     for (let i = 0; i < domains.length; i += 1) {
@@ -685,5 +714,138 @@ describe("invalidación de la consulta de detalle", () => {
     expect(
       client.getQueryState(queryKeys.movements.list)?.isInvalidated,
     ).toBe(false);
+  });
+});
+
+describe("authQueryOptions y mutaciones", () => {
+  describe("meQueryOptions", () => {
+    it("devuelve el queryKey correcto y opciones de staleTime", () => {
+      const options = meQueryOptions();
+      expect(options.queryKey).toEqual(queryKeys.auth.me);
+      expect(options.retry).toBe(false);
+      expect(options.staleTime).toBe(300000);
+    });
+
+    it("resuelve con el usuario autenticado cuando getMe es exitoso", async () => {
+      vi.mocked(getMe).mockResolvedValue(AUTH_USER);
+      const controller = new AbortController();
+
+      const options = meQueryOptions();
+      const result = await options.queryFn({ signal: controller.signal });
+
+      expect(result).toEqual(AUTH_USER);
+      expect(getMe).toHaveBeenCalledWith(controller.signal);
+    });
+
+    it("resuelve con null cuando getMe falla con 401 UNAUTHORIZED", async () => {
+      vi.mocked(getMe).mockRejectedValue(
+        new ApiError({
+          kind: "UNAUTHORIZED",
+          status: 401,
+          message: "No autenticado",
+        }),
+      );
+
+      const options = meQueryOptions();
+      const result = await options.queryFn({
+        signal: new AbortController().signal,
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it("propaga el error cuando getMe falla con error 500 INTERNAL", async () => {
+      const error = new ApiError({
+        kind: "INTERNAL",
+        status: 500,
+        message: "Error de servidor",
+      });
+      vi.mocked(getMe).mockRejectedValue(error);
+
+      const options = meQueryOptions();
+      await expect(
+        options.queryFn({ signal: new AbortController().signal }),
+      ).rejects.toThrow("Error de servidor");
+    });
+  });
+
+  describe("loginMutationOptions", () => {
+    it("llama a login y actualiza la query de auth.me en onSuccess", async () => {
+      const client = new QueryClient();
+      vi.mocked(login).mockResolvedValue(AUTH_USER);
+      const input: LoginInput = {
+        email: "admin@example.com",
+        password: "password123",
+      };
+
+      const options = loginMutationOptions(client);
+      const result = await options.mutationFn(input);
+      expect(result).toEqual(AUTH_USER);
+      expect(login).toHaveBeenCalledWith(input);
+
+      options.onSuccess(AUTH_USER);
+      expect(client.getQueryData(queryKeys.auth.me)).toEqual(AUTH_USER);
+    });
+  });
+
+  describe("logoutMutationOptions", () => {
+    it("llama a logout, cancela consultas en vuelo, purga datos privados y establece auth.me en null", async () => {
+      const client = new QueryClient();
+      vi.mocked(logout).mockResolvedValue(null);
+
+      // Precargar datos en caché
+      client.setQueryData(queryKeys.auth.me, AUTH_USER);
+      client.setQueryData(queryKeys.products.all, [PRODUCT]);
+      client.setQueryData(queryKeys.movements.all, [MOVEMENT]);
+      client.setQueryData(queryKeys.categories.all, [CATEGORY]);
+      client.setQueryData(queryKeys.suppliers.all, [SUPPLIER]);
+
+      const cancelSpy = vi.spyOn(client, "cancelQueries");
+      const removeSpy = vi.spyOn(client, "removeQueries");
+
+      const options = logoutMutationOptions(client);
+      const result = await options.mutationFn();
+      expect(result).toBeNull();
+      expect(logout).toHaveBeenCalled();
+
+      await options.onSuccess();
+
+      // Verifica cancelación de consultas pendientes de datos privados
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.products.all,
+      });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.movements.all,
+      });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.categories.all,
+      });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.suppliers.all,
+      });
+
+      // Verifica eliminación de datos privados
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.products.all,
+      });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.movements.all,
+      });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.categories.all,
+      });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.suppliers.all,
+      });
+
+      // Verifica que no quede rastro de los datos privados en caché
+      expect(client.getQueryData(queryKeys.products.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.movements.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.categories.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.suppliers.all)).toBeUndefined();
+
+      // Verifica que la sesión quede en null explícito
+      expect(client.getQueryData(queryKeys.auth.me)).toBeNull();
+    });
   });
 });
