@@ -6,6 +6,8 @@ export type IdRouteContext = {
 
 const STATUS_BY_KIND: Record<AppErrorKind, number> = {
   VALIDATION: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
   INTERNAL: 500,

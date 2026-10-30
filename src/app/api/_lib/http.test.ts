@@ -185,6 +185,36 @@ describe("errorResponse", () => {
     });
   });
 
+  it("mapea UNAUTHORIZED a 401", async () => {
+    const response = errorResponse(
+      new AppError({ kind: "UNAUTHORIZED", message: "No autenticado" }),
+    );
+
+    expect(response.status).toBe(401);
+
+    const json = (await response.json()) as ErrorEnvelope;
+
+    expect(json.error).toEqual({
+      kind: "UNAUTHORIZED",
+      message: "No autenticado",
+    });
+  });
+
+  it("mapea FORBIDDEN a 403", async () => {
+    const response = errorResponse(
+      new AppError({ kind: "FORBIDDEN", message: "No autorizado" }),
+    );
+
+    expect(response.status).toBe(403);
+
+    const json = (await response.json()) as ErrorEnvelope;
+
+    expect(json.error).toEqual({
+      kind: "FORBIDDEN",
+      message: "No autorizado",
+    });
+  });
+
   it("mapea NOT_FOUND a 404", async () => {
     const response = errorResponse(
       new AppError({ kind: "NOT_FOUND", message: "El producto no existe" }),

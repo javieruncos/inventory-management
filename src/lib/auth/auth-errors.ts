@@ -1,19 +1,19 @@
-export class AuthenticationRequiredError extends Error {
-  readonly kind = "UNAUTHORIZED" as const;
+import { AppError } from "@/lib/errors";
+
+export class AuthenticationRequiredError extends AppError {
   readonly status = 401 as const;
 
   constructor() {
-    super("No autenticado");
+    super({ kind: "UNAUTHORIZED", message: "No autenticado" });
     this.name = "AuthenticationRequiredError";
   }
 }
 
-export class ForbiddenError extends Error {
-  readonly kind = "FORBIDDEN" as const;
+export class ForbiddenError extends AppError {
   readonly status = 403 as const;
 
   constructor() {
-    super("No autorizado");
+    super({ kind: "FORBIDDEN", message: "No autorizado" });
     this.name = "ForbiddenError";
   }
 }

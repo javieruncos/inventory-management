@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 
 export type AppErrorKind =
   | "VALIDATION"
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "CONFLICT"
   | "NOT_FOUND"
   | "INTERNAL";

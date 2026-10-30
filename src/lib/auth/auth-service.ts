@@ -2,7 +2,7 @@ import * as bcrypt from "bcrypt";
 import { connectDB } from "@/db/connection";
 import UserModel, { type User } from "@/db/models/User";
 import { signAccessToken } from "@/lib/auth/jwt";
-import { normalizeError } from "@/lib/errors";
+import { AppError, normalizeError } from "@/lib/errors";
 
 const DUMMY_PASSWORD_HASH =
   "$2b$12$8kumSJsTlcmqL998gb8Kk.zHMfFXisenPUw8UD9AZsBVjhiuOFZTy";
@@ -23,9 +23,11 @@ export interface AuthenticationResult {
   user: AuthenticatedUser;
 }
 
-export class InvalidCredentialsError extends Error {
+export class InvalidCredentialsError extends AppError {
+  readonly status = 401 as const;
+
   constructor() {
-    super("Credenciales inválidas");
+    super({ kind: "UNAUTHORIZED", message: "Credenciales inválidas" });
     this.name = "InvalidCredentialsError";
   }
 }

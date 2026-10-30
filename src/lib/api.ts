@@ -4,6 +4,7 @@ import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import type { CreateSupplierInput } from "@/schemas/supplier";
+import type { LoginInput } from "@/schemas/auth";
 import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
@@ -12,6 +13,12 @@ import type { SupplierDTO } from "@/types/supplier";
 export type UpdateProductInput = Partial<CreateProductInput>;
 export type UpdateCategoryInput = Partial<CreateCategoryInput>;
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: "user" | "admin";
+}
 
 export class ApiError extends Error {
   readonly kind: AppErrorKind;
@@ -37,6 +44,12 @@ const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/;
 const isoDate = z
   .string()
   .refine((value) => !Number.isNaN(Date.parse(value)));
+
+const authUserSchema: z.ZodType<AuthUser> = z.object({
+  id: z.string().regex(OBJECT_ID_PATTERN),
+  email: z.string().email(),
+  role: z.enum(["user", "admin"]),
+});
 
 const productSchema: z.ZodType<ProductDTO> = z.object({
   _id: z.string().regex(OBJECT_ID_PATTERN),
@@ -92,7 +105,14 @@ const supplierListSchema = z.array(supplierSchema);
 
 const errorEnvelopeSchema = z.object({
   error: z.object({
-    kind: z.enum(["VALIDATION", "CONFLICT", "NOT_FOUND", "INTERNAL"]),
+    kind: z.enum([
+      "VALIDATION",
+      "UNAUTHORIZED",
+      "FORBIDDEN",
+      "CONFLICT",
+      "NOT_FOUND",
+      "INTERNAL",
+    ]),
     message: z.string(),
     issues: z
       .array(z.object({ path: z.string(), message: z.string() }))
@@ -162,6 +182,28 @@ export async function fetchJson<T>(
   }
 
   return envelope.data.data;
+}
+
+export async function login(input: LoginInput): Promise<AuthUser> {
+  return fetchJson("/api/auth/login", authUserSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function logout(): Promise<null> {
+  return fetchJson("/api/auth/logout", z.null(), {
+    method: "POST",
+  });
+}
+
+export async function getMe(signal?: AbortSignal): Promise<AuthUser> {
+  return fetchJson(
+    "/api/auth/me",
+    authUserSchema,
+    signal ? { signal } : undefined,
+  );
 }
 
 export async function getProducts(

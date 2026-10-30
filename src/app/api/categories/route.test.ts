@@ -2,7 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 import type { Category } from "@/db/models/Category";
 import { GET, POST } from "@/app/api/categories/route";
+import {
+  AuthenticationRequiredError,
+  ForbiddenError,
+} from "@/lib/auth/auth-errors";
+import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
 import { createCategory, listCategories } from "@/lib/categories";
+
+vi.mock("@/lib/auth/auth-guards", () => ({
+  requireUser: vi.fn(),
+  requireAdmin: vi.fn(),
+}));
 
 vi.mock("@/lib/categories", () => ({
   listCategories: vi.fn(),
@@ -21,6 +31,21 @@ type ErrorEnvelope = {
 };
 
 const BASE_URL = "http://localhost/api/categories";
+const USER = {
+  id: "507f1f77bcf86cd799439011",
+  email: "user@example.com",
+  role: "user" as const,
+};
+const ADMIN = {
+  id: "507f1f77bcf86cd799439012",
+  email: "admin@example.com",
+  role: "admin" as const,
+};
+
+function mockAllowedRoles(): void {
+  vi.mocked(requireUser).mockResolvedValue(USER);
+  vi.mocked(requireAdmin).mockResolvedValue(ADMIN);
+}
 
 function makePostRequest(body: string): Request {
   return new Request(BASE_URL, {
@@ -33,6 +58,7 @@ function makePostRequest(body: string): Request {
 describe("GET /api/categories", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   it("devuelve 200 con la lista de categorías", async () => {
@@ -44,11 +70,33 @@ describe("GET /api/categories", () => {
     const response = await GET(new Request(BASE_URL));
 
     expect(response.status).toBe(200);
+    expect(requireUser).toHaveBeenCalledTimes(1);
     expect(listCategories).toHaveBeenCalledTimes(1);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: categories });
+  });
+
+  it("permite el acceso a un administrador autenticado", async () => {
+    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(listCategories).mockResolvedValue([]);
+
+    const response = await GET(new Request(BASE_URL));
+
+    expect(response.status).toBe(200);
+    expect(listCategories).toHaveBeenCalledTimes(1);
+  });
+
+  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
+    vi.mocked(requireUser).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await GET(new Request(BASE_URL));
+
+    expect(response.status).toBe(401);
+    expect(listCategories).not.toHaveBeenCalled();
   });
 
   it("devuelve 500 con error genérico en INTERNAL", async () => {
@@ -84,6 +132,7 @@ describe("GET /api/categories", () => {
 describe("POST /api/categories", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   const payload = {
@@ -103,11 +152,40 @@ describe("POST /api/categories", () => {
     const response = await POST(makePostRequest(JSON.stringify(payload)));
 
     expect(response.status).toBe(201);
+    expect(requireAdmin).toHaveBeenCalledTimes(1);
     expect(createCategory).toHaveBeenCalledWith(payload);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: category });
+  });
+
+  it("devuelve 401 sin autenticación antes de parsear el body", async () => {
+    const request = makePostRequest('{"name":');
+    const jsonSpy = vi.spyOn(request, "json");
+
+    vi.mocked(requireAdmin).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(401);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(createCategory).not.toHaveBeenCalled();
+  });
+
+  it("devuelve 403 a un usuario sin rol admin antes de parsear el body", async () => {
+    const request = makePostRequest(JSON.stringify(payload));
+    const jsonSpy = vi.spyOn(request, "json");
+
+    vi.mocked(requireAdmin).mockRejectedValue(new ForbiddenError());
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(403);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(createCategory).not.toHaveBeenCalled();
   });
 
   it("devuelve 400 cuando el JSON está malformado sin llamar a la lib", async () => {

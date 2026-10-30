@@ -8,11 +8,14 @@ import {
   deleteProduct,
   deleteSupplier,
   getCategories,
+  getMe,
   getMovements,
   getMovementsByProduct,
   getProduct,
   getProducts,
   getSuppliers,
+  login,
+  logout,
   updateCategory,
   updateProduct,
   updateSupplier,
@@ -73,6 +76,12 @@ const CREATE_INPUT = {
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+const AUTH_USER = {
+  id: "507f1f77bcf86cd799439011",
+  email: "admin@example.com",
+  role: "admin" as const,
+};
+
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
@@ -80,6 +89,101 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("login", () => {
+  it("hace POST a /api/auth/login y devuelve el usuario del envelope", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: AUTH_USER }));
+    const input = { email: "admin@example.com", password: "secret" };
+
+    const result = await login(input);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/login", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(input),
+    });
+    expect(result).toEqual(AUTH_USER);
+  });
+
+  it("propaga el 401 de credenciales inválidas", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "UNAUTHORIZED",
+            message: "Credenciales inválidas",
+          },
+        },
+        { status: 401 },
+      ),
+    );
+
+    await expect(
+      login({ email: "admin@example.com", password: "wrong" }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "UNAUTHORIZED",
+      status: 401,
+      message: "Credenciales inválidas",
+    });
+  });
+});
+
+describe("logout", () => {
+  it("hace POST a /api/auth/logout y devuelve null", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: null }));
+
+    const result = await logout();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
+      method: "POST",
+    });
+    expect(result).toBeNull();
+  });
+});
+
+describe("getMe", () => {
+  it("solicita /api/auth/me y devuelve el usuario autenticado", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: AUTH_USER }));
+
+    const result = await getMe();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/me", undefined);
+    expect(result).toEqual(AUTH_USER);
+  });
+
+  it("pasa el AbortSignal a fetch para cancelación", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: AUTH_USER }));
+    const controller = new AbortController();
+
+    await getMe(controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/me", {
+      signal: controller.signal,
+    });
+  });
+
+  it("propaga el 401 cuando no hay sesión", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "UNAUTHORIZED",
+            message: "No autenticado",
+          },
+        },
+        { status: 401 },
+      ),
+    );
+
+    await expect(getMe()).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "UNAUTHORIZED",
+      status: 401,
+      message: "No autenticado",
+    });
+  });
 });
 
 describe("getProducts", () => {

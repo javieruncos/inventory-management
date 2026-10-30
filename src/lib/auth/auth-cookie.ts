@@ -33,3 +33,15 @@ export function setAuthCookie(
 
   return response;
 }
+
+export function clearAuthCookie(response: NextResponse): NextResponse {
+  response.cookies.set({
+    ...getAuthCookieOptions(),
+    name: AUTH_COOKIE_NAME,
+    value: "",
+    maxAge: 0,
+    expires: new Date(0),
+  });
+
+  return response;
+}
