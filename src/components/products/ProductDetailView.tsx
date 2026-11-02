@@ -26,6 +26,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TrendPill } from "@/components/ui/TrendPill";
 import { ApiError } from "@/lib/api";
+import { useCanManageCatalog } from "@/lib/auth/useCanManageCatalog";
 import { cn } from "@/lib/cn";
 import { getStockStatus } from "@/lib/dashboard";
 import {
@@ -321,6 +322,7 @@ type DetailDialog = "edit" | "movement" | null;
 
 export function ProductDetailView({ productId }: ProductDetailViewProps) {
   const router = useRouter();
+  const canManage = useCanManageCatalog();
   const productQuery = useProduct(productId);
   const movementsQuery = useProductMovements(productId);
   const categoriesQuery = useCategories();
@@ -453,20 +455,24 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
                 <ArrowLeftRight aria-hidden="true" size={16} />
                 Registrar movimiento
               </Button>
-              <Button
-                variant="secondary"
-                onClick={openEdit}
-                disabled={deleteMutation.isPending}
-              >
-                <Pencil aria-hidden="true" size={16} />
-                Editar
-              </Button>
-              <IconButton
-                label={`Eliminar ${product.name}`}
-                icon={<Trash size={16} />}
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-              />
+              {canManage ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={openEdit}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Pencil aria-hidden="true" size={16} />
+                    Editar
+                  </Button>
+                  <IconButton
+                    label={`Eliminar ${product.name}`}
+                    icon={<Trash size={16} />}
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                  />
+                </>
+              ) : null}
             </div>
           }
         />

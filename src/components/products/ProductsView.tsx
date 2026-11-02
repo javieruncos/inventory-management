@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
+import { useCanManageCatalog } from "@/lib/auth/useCanManageCatalog";
 import { cn } from "@/lib/cn";
 import { getStockStatus, type StockStatus } from "@/lib/dashboard";
 import { toViewStatus, useDeleteProduct, useProducts } from "@/lib/queries";
@@ -46,6 +47,7 @@ function deleteErrorMessage(error: unknown): string {
 }
 
 export function ProductsView() {
+  const canManage = useCanManageCatalog();
   const productsQuery = useProducts();
   const deleteMutation = useDeleteProduct();
   const status = toViewStatus(productsQuery);
@@ -186,6 +188,7 @@ export function ProductsView() {
           <ProductsList
             products={filtered}
             totalProducts={products.length}
+            canManage={canManage}
             onEdit={openEdit}
             onDelete={handleDelete}
           />
@@ -204,10 +207,12 @@ export function ProductsView() {
           title="Productos"
           subtitle="Catálogo de productos del inventario."
           actions={
-            <Button onClick={openCreate}>
-              <Plus aria-hidden="true" size={16} />
-              Nuevo producto
-            </Button>
+            canManage ? (
+              <Button onClick={openCreate}>
+                <Plus aria-hidden="true" size={16} />
+                Nuevo producto
+              </Button>
+            ) : undefined
           }
         />
         <section

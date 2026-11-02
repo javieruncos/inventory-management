@@ -6,6 +6,7 @@ import { IconButton } from "@/components/ui/IconButton";
 type CategoriesListProps = {
   categories: CategoryDTO[];
   totalCategories: number;
+  canManage: boolean;
   /** Abre el diálogo de edición; el segundo argumento es el botón disparador (para restaurar el foco al cerrar). */
   onEdit: (category: CategoryDTO, trigger: HTMLElement) => void;
   /** Abre el diálogo de confirmación de eliminación; el segundo argumento es el botón disparador. */
@@ -29,6 +30,7 @@ function countLabel(shown: number, total: number): string {
 export function CategoriesList({
   categories,
   totalCategories,
+  canManage,
   onEdit,
   onDelete,
 }: CategoriesListProps) {
@@ -44,9 +46,11 @@ export function CategoriesList({
               <th scope="col" className="py-3 pl-0 pr-4 text-left">
                 Nombre
               </th>
-              <th scope="col" className="py-3 pl-4 pr-0 text-right">
-                Acciones
-              </th>
+              {canManage ? (
+                <th scope="col" className="py-3 pl-4 pr-0 text-right">
+                  Acciones
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-divider">
@@ -63,24 +67,26 @@ export function CategoriesList({
                     {descriptionOf(category)}
                   </span>
                 </td>
-                <td className="py-3 pl-4 pr-0 text-right align-middle">
-                  <div className="flex items-center justify-end gap-2">
-                    <IconButton
-                      label={`Editar ${category.name}`}
-                      icon={<Pencil size={16} />}
-                      onClick={(event) =>
-                        onEdit(category, event.currentTarget)
-                      }
-                    />
-                    <IconButton
-                      label={`Eliminar ${category.name}`}
-                      icon={<Trash size={16} />}
-                      onClick={(event) =>
-                        onDelete(category, event.currentTarget)
-                      }
-                    />
-                  </div>
-                </td>
+                {canManage ? (
+                  <td className="py-3 pl-4 pr-0 text-right align-middle">
+                    <div className="flex items-center justify-end gap-2">
+                      <IconButton
+                        label={`Editar ${category.name}`}
+                        icon={<Pencil size={16} />}
+                        onClick={(event) =>
+                          onEdit(category, event.currentTarget)
+                        }
+                      />
+                      <IconButton
+                        label={`Eliminar ${category.name}`}
+                        icon={<Trash size={16} />}
+                        onClick={(event) =>
+                          onDelete(category, event.currentTarget)
+                        }
+                      />
+                    </div>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
@@ -100,18 +106,22 @@ export function CategoriesList({
                     {descriptionOf(category)}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <IconButton
-                    label={`Editar ${category.name}`}
-                    icon={<Pencil size={16} />}
-                    onClick={(event) => onEdit(category, event.currentTarget)}
-                  />
-                  <IconButton
-                    label={`Eliminar ${category.name}`}
-                    icon={<Trash size={16} />}
-                    onClick={(event) => onDelete(category, event.currentTarget)}
-                  />
-                </div>
+                {canManage ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <IconButton
+                      label={`Editar ${category.name}`}
+                      icon={<Pencil size={16} />}
+                      onClick={(event) => onEdit(category, event.currentTarget)}
+                    />
+                    <IconButton
+                      label={`Eliminar ${category.name}`}
+                      icon={<Trash size={16} />}
+                      onClick={(event) =>
+                        onDelete(category, event.currentTarget)
+                      }
+                    />
+                  </div>
+                ) : null}
               </div>
             </Card>
           </li>
