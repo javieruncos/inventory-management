@@ -128,27 +128,33 @@ export function useLogin() {
   return useMutation(loginMutationOptions(queryClient));
 }
 
+const PRIVATE_QUERY_ROOTS = [
+  queryKeys.products.all,
+  queryKeys.movements.all,
+  queryKeys.categories.all,
+  queryKeys.suppliers.all,
+] as const;
+
+export async function purgePrivateQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await Promise.all(
+    PRIVATE_QUERY_ROOTS.map((queryKey) =>
+      queryClient.cancelQueries({ queryKey }),
+    ),
+  );
+
+  for (const queryKey of PRIVATE_QUERY_ROOTS) {
+    queryClient.removeQueries({ queryKey });
+  }
+}
+
 export function logoutMutationOptions(queryClient: QueryClient) {
   return {
     mutationFn: () => logout(),
     onSuccess: async () => {
-      // 1. Cancelar cualquier consulta en curso de datos privados
-      // para evitar que respuestas demoradas reintroduzcan datos en caché.
-      await Promise.all([
-        queryClient.cancelQueries({ queryKey: queryKeys.products.all }),
-        queryClient.cancelQueries({ queryKey: queryKeys.movements.all }),
-        queryClient.cancelQueries({ queryKey: queryKeys.categories.all }),
-        queryClient.cancelQueries({ queryKey: queryKeys.suppliers.all }),
-      ]);
-
-      // 2. Establecer sesión anónima explícita
+      await purgePrivateQueries(queryClient);
       queryClient.setQueryData(queryKeys.auth.me, null);
-
-      // 3. Purgar las queries privadas de la memoria
-      queryClient.removeQueries({ queryKey: queryKeys.products.all });
-      queryClient.removeQueries({ queryKey: queryKeys.movements.all });
-      queryClient.removeQueries({ queryKey: queryKeys.categories.all });
-      queryClient.removeQueries({ queryKey: queryKeys.suppliers.all });
     },
   };
 }

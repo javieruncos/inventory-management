@@ -24,18 +24,21 @@ export class ApiError extends Error {
   readonly kind: AppErrorKind;
   readonly status: number;
   readonly issues?: FieldIssue[];
+  readonly path?: string;
 
   constructor(options: {
     kind: AppErrorKind;
     message: string;
     status: number;
     issues?: FieldIssue[];
+    path?: string;
   }) {
     super(options.message);
     this.name = "ApiError";
     this.kind = options.kind;
     this.status = options.status;
     this.issues = options.issues;
+    this.path = options.path;
   }
 }
 
@@ -134,6 +137,7 @@ export async function fetchJson<T>(
       kind: "INTERNAL",
       status: 0,
       message: "No se pudo conectar con el servidor",
+      path,
     });
   }
 
@@ -149,13 +153,18 @@ export async function fetchJson<T>(
     const envelope = errorEnvelopeSchema.safeParse(errorBody);
 
     if (envelope.success) {
-      throw new ApiError({ ...envelope.data.error, status: response.status });
+      throw new ApiError({
+        ...envelope.data.error,
+        status: response.status,
+        path,
+      });
     }
 
     throw new ApiError({
       kind: "INTERNAL",
       status: response.status,
       message: "Error del servidor",
+      path,
     });
   }
 
@@ -168,6 +177,7 @@ export async function fetchJson<T>(
       kind: "INTERNAL",
       status: response.status,
       message: "Respuesta inesperada del servidor",
+      path,
     });
   }
 
@@ -178,6 +188,7 @@ export async function fetchJson<T>(
       kind: "INTERNAL",
       status: response.status,
       message: "Respuesta inesperada del servidor",
+      path,
     });
   }
 

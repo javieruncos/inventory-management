@@ -182,6 +182,53 @@ describe("getMe", () => {
       kind: "UNAUTHORIZED",
       status: 401,
       message: "No autenticado",
+      path: "/api/auth/me",
+    });
+  });
+});
+
+describe("ApiError path", () => {
+  it("conserva la ruta de una consulta privada", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "UNAUTHORIZED",
+            message: "No autenticado",
+          },
+        },
+        { status: 401 },
+      ),
+    );
+
+    await expect(getProducts()).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "UNAUTHORIZED",
+      status: 401,
+      path: "/api/products",
+    });
+  });
+
+  it("conserva la ruta de login para distinguir credenciales inválidas", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "UNAUTHORIZED",
+            message: "Credenciales inválidas",
+          },
+        },
+        { status: 401 },
+      ),
+    );
+
+    await expect(
+      login({ email: "admin@example.com", password: "wrong" }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "UNAUTHORIZED",
+      status: 401,
+      path: "/api/auth/login",
     });
   });
 });
