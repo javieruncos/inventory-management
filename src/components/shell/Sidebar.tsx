@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Boxes } from "lucide-react";
 import { NAV_ITEMS } from "@/components/shell/nav-items";
+import { useCanManageUsers } from "@/lib/auth/useCanManageUsers";
 import { cn } from "@/lib/cn";
 
 type SidebarProps = {
@@ -22,6 +23,10 @@ export function Sidebar({
   className,
 }: SidebarProps) {
   const pathname = usePathname();
+  const canManageUsers = useCanManageUsers();
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.adminOnly || canManageUsers,
+  );
   const labelClass =
     variant === "rail" ? "sr-only desktop:not-sr-only" : undefined;
 
@@ -58,7 +63,7 @@ export function Sidebar({
         className="min-h-0 flex-1 overflow-y-auto p-3"
       >
         <ul className="flex flex-col gap-1">
-          {NAV_ITEMS.map((item) => {
+          {visibleItems.map((item) => {
             const isActive =
               item.href !== null &&
               (item.href === "/"
