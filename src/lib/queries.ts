@@ -10,6 +10,8 @@ import {
   createMovement,
   createProduct,
   createSupplier,
+  createUser,
+  deactivateUser,
   deleteCategory,
   deleteProduct,
   deleteSupplier,
@@ -20,6 +22,7 @@ import {
   getProduct,
   getProducts,
   getSuppliers,
+  getUsers,
   login,
   logout,
   updateCategory,
@@ -35,6 +38,7 @@ import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import type { CreateSupplierInput } from "@/schemas/supplier";
+import type { CreateUserInput } from "@/schemas/user";
 import type { StockMovementDTO } from "@/types/stockMovement";
 
 export const queryKeys = {
@@ -59,6 +63,10 @@ export const queryKeys = {
   suppliers: {
     all: ["suppliers"] as const,
     list: ["suppliers", "list"] as const,
+  },
+  users: {
+    all: ["users"] as const,
+    list: ["users", "list"] as const,
   },
 };
 
@@ -133,6 +141,7 @@ const PRIVATE_QUERY_ROOTS = [
   queryKeys.movements.all,
   queryKeys.categories.all,
   queryKeys.suppliers.all,
+  queryKeys.users.all,
 ] as const;
 
 export async function purgePrivateQueries(
@@ -192,6 +201,13 @@ export function suppliersQueryOptions() {
   };
 }
 
+export function usersQueryOptions() {
+  return {
+    queryKey: queryKeys.users.list,
+    queryFn: ({ signal }: { signal: AbortSignal }) => getUsers(signal),
+  };
+}
+
 export function productQueryOptions(id: string) {
   return {
     queryKey: queryKeys.products.detail(id),
@@ -221,6 +237,10 @@ export function useCategories() {
 
 export function useSuppliers() {
   return useQuery(suppliersQueryOptions());
+}
+
+export function useUsers() {
+  return useQuery(usersQueryOptions());
 }
 
 const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/;
@@ -365,6 +385,34 @@ export function useUpdateSupplier() {
 export function useDeleteSupplier() {
   const queryClient = useQueryClient();
   return useMutation(deleteSupplierMutationOptions(queryClient));
+}
+
+function invalidateUsers(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+}
+
+export function createUserMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (input: CreateUserInput) => createUser(input),
+    onSuccess: () => invalidateUsers(queryClient),
+  };
+}
+
+export function deactivateUserMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (id: string) => deactivateUser(id),
+    onSuccess: () => invalidateUsers(queryClient),
+  };
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  return useMutation(createUserMutationOptions(queryClient));
+}
+
+export function useDeactivateUser() {
+  const queryClient = useQueryClient();
+  return useMutation(deactivateUserMutationOptions(queryClient));
 }
 
 function invalidateStockData(

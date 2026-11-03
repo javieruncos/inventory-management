@@ -4,11 +4,13 @@ import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import type { CreateSupplierInput } from "@/schemas/supplier";
+import type { CreateUserInput } from "@/schemas/user";
 import type { LoginInput } from "@/schemas/auth";
 import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
 import type { StockMovementDTO } from "@/types/stockMovement";
 import type { SupplierDTO } from "@/types/supplier";
+import type { UserDTO } from "@/types/user";
 
 export type UpdateProductInput = Partial<CreateProductInput>;
 export type UpdateCategoryInput = Partial<CreateCategoryInput>;
@@ -52,6 +54,14 @@ const authUserSchema: z.ZodType<AuthUser> = z.object({
   id: z.string().regex(OBJECT_ID_PATTERN),
   email: z.string().email(),
   role: z.enum(["user", "admin"]),
+});
+
+const userSchema: z.ZodType<UserDTO> = z.object({
+  id: z.string().regex(OBJECT_ID_PATTERN),
+  email: z.string().email(),
+  role: z.enum(["user", "admin"]),
+  isActive: z.boolean(),
+  createdAt: isoDate,
 });
 
 const productSchema: z.ZodType<ProductDTO> = z.object({
@@ -105,6 +115,7 @@ const productListSchema = z.array(productSchema);
 const movementListSchema = z.array(stockMovementSchema);
 const categoryListSchema = z.array(categorySchema);
 const supplierListSchema = z.array(supplierSchema);
+const userListSchema = z.array(userSchema);
 
 const errorEnvelopeSchema = z.object({
   error: z.object({
@@ -215,6 +226,28 @@ export async function getMe(signal?: AbortSignal): Promise<AuthUser> {
     authUserSchema,
     signal ? { signal } : undefined,
   );
+}
+
+export async function getUsers(signal?: AbortSignal): Promise<UserDTO[]> {
+  return fetchJson(
+    "/api/users",
+    userListSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export async function createUser(input: CreateUserInput): Promise<UserDTO> {
+  return fetchJson("/api/users", userSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deactivateUser(id: string): Promise<UserDTO> {
+  return fetchJson(`/api/users/${id}/deactivate`, userSchema, {
+    method: "POST",
+  });
 }
 
 export async function getProducts(

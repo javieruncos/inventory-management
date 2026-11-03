@@ -50,6 +50,7 @@ export class AppError extends Error {
 const DUPLICATE_MESSAGES: Record<string, string> = {
   sku: "El SKU ya existe",
   name: "Ese nombre ya está en uso",
+  email: "El email ya está en uso",
 };
 
 interface DuplicateKeyError {

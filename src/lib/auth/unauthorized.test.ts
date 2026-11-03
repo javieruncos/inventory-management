@@ -18,6 +18,7 @@ const PRIVATE_QUERY_ROOTS = [
   queryKeys.movements.all,
   queryKeys.categories.all,
   queryKeys.suppliers.all,
+  queryKeys.users.all,
 ] as const;
 
 const PUBLIC_QUERY_KEY = ["public", "reference"] as const;
@@ -49,6 +50,7 @@ describe("isPrivateUnauthorized", () => {
     "/api/products/64b7f0c2e1a2b3c4d5e6f7a8",
     "/api/categories",
     "/api/suppliers",
+    "/api/users",
     "/api/stock",
   ])("detecta un 401 de la ruta privada %s", (path) => {
     expect(isPrivateUnauthorized(privateUnauthorized(path))).toBe(true);

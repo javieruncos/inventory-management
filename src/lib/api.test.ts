@@ -4,6 +4,8 @@ import {
   createMovement,
   createProduct,
   createSupplier,
+  createUser,
+  deactivateUser,
   deleteCategory,
   deleteProduct,
   deleteSupplier,
@@ -14,6 +16,7 @@ import {
   getProduct,
   getProducts,
   getSuppliers,
+  getUsers,
   login,
   logout,
   updateCategory,
@@ -80,6 +83,14 @@ const AUTH_USER = {
   id: "507f1f77bcf86cd799439011",
   email: "admin@example.com",
   role: "admin" as const,
+};
+
+const MANAGED_USER = {
+  id: "507f1f77bcf86cd799439021",
+  email: "user@example.com",
+  role: "user" as const,
+  isActive: true,
+  createdAt: "2026-01-01T10:00:00.000Z",
 };
 
 beforeEach(() => {
@@ -184,6 +195,96 @@ describe("getMe", () => {
       message: "No autenticado",
       path: "/api/auth/me",
     });
+  });
+});
+
+describe("getUsers", () => {
+  it("solicita /api/users y devuelve la lista del envelope", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ data: [MANAGED_USER] }),
+    );
+
+    const result = await getUsers();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/users", undefined);
+    expect(result).toEqual([MANAGED_USER]);
+  });
+
+  it("pasa el AbortSignal a fetch para cancelación", async () => {
+    fetchMock.mockResolvedValue(Response.json({ data: [] }));
+    const controller = new AbortController();
+
+    await getUsers(controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/users", {
+      signal: controller.signal,
+    });
+  });
+});
+
+describe("createUser", () => {
+  it("hace POST a /api/users con el body y devuelve el usuario", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ data: MANAGED_USER }, { status: 201 }),
+    );
+    const input = {
+      email: "user@example.com",
+      password: "a".repeat(12),
+    };
+
+    const result = await createUser(input);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/users", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(input),
+    });
+    expect(result).toEqual(MANAGED_USER);
+  });
+
+  it("propaga el CONFLICT de email duplicado", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: "CONFLICT",
+            message: "El email ya está en uso",
+            issues: [
+              { path: "email", message: "El email ya está en uso" },
+            ],
+          },
+        },
+        { status: 409 },
+      ),
+    );
+
+    await expect(
+      createUser({
+        email: "user@example.com",
+        password: "a".repeat(12),
+      }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "CONFLICT",
+      status: 409,
+      message: "El email ya está en uso",
+      issues: [{ path: "email", message: "El email ya está en uso" }],
+    });
+  });
+});
+
+describe("deactivateUser", () => {
+  it("hace POST al endpoint de desactivación y devuelve el usuario", async () => {
+    const inactive = { ...MANAGED_USER, isActive: false };
+    fetchMock.mockResolvedValue(Response.json({ data: inactive }));
+
+    const result = await deactivateUser(MANAGED_USER.id);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/users/${MANAGED_USER.id}/deactivate`,
+      { method: "POST" },
+    );
+    expect(result).toEqual(inactive);
   });
 });
 

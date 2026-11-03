@@ -6,6 +6,8 @@ import {
   createMovement,
   createProduct,
   createSupplier,
+  createUser,
+  deactivateUser,
   deleteCategory,
   deleteProduct,
   deleteSupplier,
@@ -16,6 +18,7 @@ import {
   getProduct,
   getProducts,
   getSuppliers,
+  getUsers,
   login,
   logout,
   updateCategory,
@@ -32,6 +35,8 @@ import {
   createMovementMutationOptions,
   createProductMutationOptions,
   createSupplierMutationOptions,
+  createUserMutationOptions,
+  deactivateUserMutationOptions,
   deleteCategoryMutationOptions,
   deleteProductMutationOptions,
   deleteSupplierMutationOptions,
@@ -48,6 +53,7 @@ import {
   suppliersQueryOptions,
   toViewStatus,
   updateCategoryMutationOptions,
+  usersQueryOptions,
   updateProductMutationOptions,
   updateSupplierMutationOptions,
 } from "@/lib/queries";
@@ -62,6 +68,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
   getMovementsByProduct: vi.fn(),
   getCategories: vi.fn(),
   getSuppliers: vi.fn(),
+  getUsers: vi.fn(),
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
@@ -71,6 +78,8 @@ vi.mock("@/lib/api", async (importOriginal) => {
   createSupplier: vi.fn(),
   updateSupplier: vi.fn(),
   deleteSupplier: vi.fn(),
+  createUser: vi.fn(),
+  deactivateUser: vi.fn(),
   createMovement: vi.fn(),
   getMe: vi.fn(),
   login: vi.fn(),
@@ -131,6 +140,14 @@ const AUTH_USER: AuthUser = {
   id: "507f1f77bcf86cd799439011",
   email: "admin@example.com",
   role: "admin",
+};
+
+const MANAGED_USER = {
+  id: "507f1f77bcf86cd799439021",
+  email: "user@example.com",
+  role: "user" as const,
+  isActive: true,
+  createdAt: "2026-01-01T10:00:00.000Z",
 };
 
 describe("queryKeys", () => {
@@ -310,6 +327,24 @@ describe("suppliersQueryOptions", () => {
     ).resolves.toEqual([SUPPLIER]);
 
     expect(getSuppliers).toHaveBeenCalledWith(controller.signal);
+  });
+});
+
+describe("usersQueryOptions", () => {
+  it("usa la clave de lista de usuarios", () => {
+    expect(usersQueryOptions().queryKey).toEqual(queryKeys.users.list);
+  });
+
+  it("delega el signal de TanStack Query en getUsers", async () => {
+    const options = usersQueryOptions();
+    const controller = new AbortController();
+    vi.mocked(getUsers).mockResolvedValue([MANAGED_USER]);
+
+    await expect(
+      options.queryFn({ signal: controller.signal }),
+    ).resolves.toEqual([MANAGED_USER]);
+
+    expect(getUsers).toHaveBeenCalledWith(controller.signal);
   });
 });
 
@@ -567,6 +602,72 @@ describe("deleteSupplierMutationOptions", () => {
   });
 });
 
+describe("createUserMutationOptions", () => {
+  it("envía el input a createUser y devuelve el usuario", async () => {
+    const client = new QueryClient();
+    vi.mocked(createUser).mockResolvedValue(MANAGED_USER);
+    const options = createUserMutationOptions(client);
+    const input = {
+      email: MANAGED_USER.email,
+      password: "a".repeat(12),
+    };
+
+    await expect(options.mutationFn(input)).resolves.toEqual(MANAGED_USER);
+
+    expect(createUser).toHaveBeenCalledWith(input);
+  });
+
+  it("invalida la raíz de usuarios al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createUserMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.all,
+    });
+  });
+});
+
+describe("deactivateUserMutationOptions", () => {
+  it("envía el id a deactivateUser y devuelve el usuario inactivo", async () => {
+    const client = new QueryClient();
+    const inactive = { ...MANAGED_USER, isActive: false };
+    vi.mocked(deactivateUser).mockResolvedValue(inactive);
+    const options = deactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).resolves.toEqual(
+      inactive,
+    );
+
+    expect(deactivateUser).toHaveBeenCalledWith(MANAGED_USER.id);
+  });
+
+  it("invalida la raíz de usuarios al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    deactivateUserMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error(
+      "No se puede desactivar al último administrador activo",
+    );
+    vi.mocked(deactivateUser).mockRejectedValue(apiError);
+    const options = deactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).rejects.toBe(apiError);
+  });
+});
+
 describe("createMovementMutationOptions", () => {
   const MOVEMENT_INPUT: CreateStockMovementInput = {
     productId: PRODUCT._id,
@@ -799,6 +900,7 @@ describe("authQueryOptions y mutaciones", () => {
       client.setQueryData(queryKeys.movements.all, [MOVEMENT]);
       client.setQueryData(queryKeys.categories.all, [CATEGORY]);
       client.setQueryData(queryKeys.suppliers.all, [SUPPLIER]);
+      client.setQueryData(queryKeys.users.all, [MANAGED_USER]);
 
       const cancelSpy = vi.spyOn(client, "cancelQueries");
       const removeSpy = vi.spyOn(client, "removeQueries");
@@ -823,6 +925,9 @@ describe("authQueryOptions y mutaciones", () => {
       expect(cancelSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.suppliers.all,
       });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.users.all,
+      });
 
       // Verifica eliminación de datos privados
       expect(removeSpy).toHaveBeenCalledWith({
@@ -837,12 +942,16 @@ describe("authQueryOptions y mutaciones", () => {
       expect(removeSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.suppliers.all,
       });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.users.all,
+      });
 
       // Verifica que no quede rastro de los datos privados en caché
       expect(client.getQueryData(queryKeys.products.all)).toBeUndefined();
       expect(client.getQueryData(queryKeys.movements.all)).toBeUndefined();
       expect(client.getQueryData(queryKeys.categories.all)).toBeUndefined();
       expect(client.getQueryData(queryKeys.suppliers.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.users.all)).toBeUndefined();
 
       // Verifica que la sesión quede en null explícito
       expect(client.getQueryData(queryKeys.auth.me)).toBeNull();
