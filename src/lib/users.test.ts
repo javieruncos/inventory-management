@@ -12,7 +12,12 @@ import {
 import { connectDB } from "@/db/connection";
 import UserModel, { type User } from "@/db/models/User";
 import { AppError } from "@/lib/errors";
-import { createUser, deactivateUser, listUsers } from "@/lib/users";
+import {
+  createUser,
+  deactivateUser,
+  listUsers,
+  reactivateUser,
+} from "@/lib/users";
 import { createUserSchema } from "@/schemas/user";
 
 vi.mock("@/db/connection", () => ({
@@ -414,6 +419,84 @@ describe("deactivateUser", () => {
 
     expect(count).toHaveBeenCalledWith({ role: "admin", isActive: true });
     expect(result.isActive).toBe(false);
+    expect(result.role).toBe("admin");
+  });
+});
+
+describe("reactivateUser", () => {
+  it("rechaza la auto-reactivación sin consultar la base", async () => {
+    const error = await getThrownError(reactivateUser(USER_ID, USER_ID));
+
+    expect(error.kind).toBe("FORBIDDEN");
+    expect(error.message).toBe("No puedes reactivar tu propia cuenta");
+    expect(connectDB).not.toHaveBeenCalled();
+  });
+
+  it("devuelve NOT_FOUND cuando el usuario no existe", async () => {
+    mockFindOne(null);
+
+    const error = await getThrownError(reactivateUser(OTHER_ID, USER_ID));
+
+    expect(error.kind).toBe("NOT_FOUND");
+    expect(error.message).toBe("El usuario no existe");
+  });
+
+  it("es idempotente cuando el usuario ya está activo", async () => {
+    const active = makeUser();
+    mockFindOne(active);
+    const update = mockFindOneAndUpdate(null);
+    const count = mockCountDocuments(1);
+
+    const result = await reactivateUser(USER_ID, OTHER_ID);
+
+    expect(result).toEqual({
+      id: USER_ID,
+      email: "user@example.com",
+      role: "user",
+      isActive: true,
+      createdAt: CREATED_AT.toISOString(),
+    });
+    expect(count).not.toHaveBeenCalled();
+    expect(update.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it("reactiva un usuario regular actualizando exclusivamente isActive", async () => {
+    const inactive = makeUser({ isActive: false });
+    const active = makeUser();
+    mockFindOne(inactive);
+    const count = mockCountDocuments(1);
+    const { findOneAndUpdate } = mockFindOneAndUpdate(active);
+
+    const result = await reactivateUser(USER_ID, OTHER_ID);
+
+    expect(connectDB).toHaveBeenCalledTimes(1);
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: USER_ID, isActive: false },
+      { $set: { isActive: true } },
+      { new: true },
+    );
+    expect(count).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      id: USER_ID,
+      email: "user@example.com",
+      role: "user",
+      isActive: true,
+      createdAt: CREATED_AT.toISOString(),
+    });
+    expect(result).not.toHaveProperty("passwordHash");
+  });
+
+  it("reactiva un administrador sin consultar el último administrador", async () => {
+    const inactiveAdmin = makeUser({ role: "admin", isActive: false });
+    const activeAdmin = makeUser({ role: "admin" });
+    mockFindOne(inactiveAdmin);
+    const count = mockCountDocuments(1);
+    mockFindOneAndUpdate(activeAdmin);
+
+    const result = await reactivateUser(USER_ID, OTHER_ID);
+
+    expect(count).not.toHaveBeenCalled();
+    expect(result.isActive).toBe(true);
     expect(result.role).toBe("admin");
   });
 });

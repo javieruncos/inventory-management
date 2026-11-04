@@ -25,6 +25,7 @@ import {
   getUsers,
   login,
   logout,
+  reactivateUser,
   updateCategory,
   updateProduct,
   updateSupplier,
@@ -405,6 +406,13 @@ export function deactivateUserMutationOptions(queryClient: QueryClient) {
   };
 }
 
+export function reactivateUserMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (id: string) => reactivateUser(id),
+    onSuccess: () => invalidateUsers(queryClient),
+  };
+}
+
 export function useCreateUser() {
   const queryClient = useQueryClient();
   return useMutation(createUserMutationOptions(queryClient));
@@ -413,6 +421,11 @@ export function useCreateUser() {
 export function useDeactivateUser() {
   const queryClient = useQueryClient();
   return useMutation(deactivateUserMutationOptions(queryClient));
+}
+
+export function useReactivateUser() {
+  const queryClient = useQueryClient();
+  return useMutation(reactivateUserMutationOptions(queryClient));
 }
 
 function invalidateStockData(

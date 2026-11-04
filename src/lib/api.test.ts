@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ApiError,
   createCategory,
   createMovement,
   createProduct,
@@ -19,6 +20,7 @@ import {
   getUsers,
   login,
   logout,
+  reactivateUser,
   updateCategory,
   updateProduct,
   updateSupplier,
@@ -285,6 +287,48 @@ describe("deactivateUser", () => {
       { method: "POST" },
     );
     expect(result).toEqual(inactive);
+  });
+});
+
+describe("reactivateUser", () => {
+  it("hace POST al endpoint de reactivación y devuelve el usuario", async () => {
+    const active = { ...MANAGED_USER, isActive: true };
+    fetchMock.mockResolvedValue(Response.json({ data: active }));
+
+    const result = await reactivateUser(MANAGED_USER.id);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/users/${MANAGED_USER.id}/reactivate`,
+      { method: "POST" },
+    );
+    expect(result).toEqual(active);
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const apiError = new ApiError({
+      kind: "NOT_FOUND",
+      status: 404,
+      message: "El usuario no existe",
+    });
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            kind: apiError.kind,
+            message: apiError.message,
+          },
+        },
+        { status: apiError.status },
+      ),
+    );
+
+    await expect(reactivateUser(MANAGED_USER.id)).rejects.toMatchObject({
+      name: "ApiError",
+      kind: "NOT_FOUND",
+      status: 404,
+      message: "El usuario no existe",
+      path: `/api/users/${MANAGED_USER.id}/reactivate`,
+    });
   });
 });
 

@@ -1,4 +1,4 @@
-import { UserMinus } from "lucide-react";
+import { UserMinus, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -9,6 +9,7 @@ type UsersListProps = {
   totalUsers: number;
   currentUserId: string;
   onDeactivate: (user: UserDTO) => void;
+  onReactivate: (user: UserDTO) => void;
 };
 
 const dateFormat = new Intl.DateTimeFormat("es", {
@@ -43,11 +44,16 @@ function canDeactivate(user: UserDTO, currentUserId: string): boolean {
   return user.isActive && user.id !== currentUserId;
 }
 
+function canReactivate(user: UserDTO, currentUserId: string): boolean {
+  return !user.isActive && user.id !== currentUserId;
+}
+
 export function UsersList({
   users,
   totalUsers,
   currentUserId,
   onDeactivate,
+  onReactivate,
 }: UsersListProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -78,6 +84,7 @@ export function UsersList({
           <tbody className="divide-y divide-divider">
             {users.map((user) => {
               const deactivatable = canDeactivate(user, currentUserId);
+              const reactivatable = canReactivate(user, currentUserId);
 
               return (
                 <tr
@@ -113,6 +120,12 @@ export function UsersList({
                         icon={<UserMinus size={16} />}
                         onClick={() => onDeactivate(user)}
                       />
+                    ) : reactivatable ? (
+                      <IconButton
+                        label={`Reactivar ${user.email}`}
+                        icon={<UserPlus size={16} />}
+                        onClick={() => onReactivate(user)}
+                      />
                     ) : null}
                   </td>
                 </tr>
@@ -125,6 +138,7 @@ export function UsersList({
       <ul className="flex flex-col gap-4 desktop:hidden">
         {users.map((user) => {
           const deactivatable = canDeactivate(user, currentUserId);
+          const reactivatable = canReactivate(user, currentUserId);
 
           return (
             <li key={user.id}>
@@ -155,6 +169,12 @@ export function UsersList({
                       label={`Desactivar ${user.email}`}
                       icon={<UserMinus size={16} />}
                       onClick={() => onDeactivate(user)}
+                    />
+                  ) : reactivatable ? (
+                    <IconButton
+                      label={`Reactivar ${user.email}`}
+                      icon={<UserPlus size={16} />}
+                      onClick={() => onReactivate(user)}
                     />
                   ) : null}
                 </div>

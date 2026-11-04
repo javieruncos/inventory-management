@@ -14,7 +14,13 @@ import { UsersSkeleton } from "@/components/users/UsersSkeleton";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
-import { toViewStatus, useDeactivateUser, useMe, useUsers } from "@/lib/queries";
+import {
+  toViewStatus,
+  useDeactivateUser,
+  useMe,
+  useReactivateUser,
+  useUsers,
+} from "@/lib/queries";
 import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { UserDTO } from "@/types/user";
 
@@ -33,10 +39,23 @@ function deactivateErrorMessage(error: unknown): string {
   return "No se pudo desactivar el usuario. Intentá nuevamente.";
 }
 
+function reactivateErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.kind === "FORBIDDEN" && error.message) {
+      return error.message;
+    }
+    if (error.kind === "NOT_FOUND") {
+      return "El usuario ya no existe. Actualizá el listado.";
+    }
+  }
+  return "No se pudo reactivar el usuario. Intentá nuevamente.";
+}
+
 export function UsersView() {
   const { data: currentUser } = useMe();
   const usersQuery = useUsers();
   const deactivateMutation = useDeactivateUser();
+  const reactivateMutation = useReactivateUser();
   const status = toViewStatus(usersQuery);
   const [dialogOpen, setDialogOpen] = useState(false);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -59,7 +78,7 @@ export function UsersView() {
 
     const result = await confirmDelete({
       title: "Desactivar usuario",
-      text: `La cuenta "${user.email}" quedará inactiva y no podrá iniciar sesión. No se ofrece reactivación desde esta interfaz.`,
+      text: `La cuenta "${user.email}" quedará inactiva y no podrá iniciar sesión. Podés reactivarla luego desde esta interfaz.`,
       confirmText: "Desactivar",
       cancelText: "Cancelar",
       onConfirm: async () => {
@@ -74,6 +93,30 @@ export function UsersView() {
 
     if (result.status === "confirmed") {
       void notifySuccess("Usuario desactivado");
+      listSectionRef.current?.focus();
+    }
+  };
+
+  const handleReactivate = async (user: UserDTO) => {
+    if (user.isActive || user.id === currentUserId) return;
+
+    const result = await confirmDelete({
+      title: "Reactivar usuario",
+      text: `La cuenta "${user.email}" volverá a estar activa y podrá iniciar sesión nuevamente. No se modifican su email, contraseña, rol ni fecha de creación.`,
+      confirmText: "Reactivar",
+      cancelText: "Cancelar",
+      onConfirm: async () => {
+        await reactivateMutation.mutateAsync(user.id);
+      },
+    });
+
+    if (result.status === "failed") {
+      await notifyError(reactivateErrorMessage(result.error));
+      return;
+    }
+
+    if (result.status === "confirmed") {
+      void notifySuccess("Usuario reactivado");
       listSectionRef.current?.focus();
     }
   };
@@ -117,6 +160,7 @@ export function UsersView() {
         totalUsers={users.length}
         currentUserId={currentUserId}
         onDeactivate={handleDeactivate}
+        onReactivate={handleReactivate}
       />
     );
   }

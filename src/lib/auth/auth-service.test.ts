@@ -110,6 +110,25 @@ describe("authenticateUser", () => {
     });
   });
 
+  it("autentica un usuario reactivado con su contraseña existente", async () => {
+    mockUser(makeUser({ isActive: true }));
+
+    const result = await authenticateUser({
+      email: EMAIL,
+      password: PASSWORD,
+    });
+
+    expect(result).toEqual({
+      token: TOKEN,
+      user: {
+        id: USER_ID,
+        email: EMAIL,
+        role: "admin",
+      },
+    });
+    expect(signAccessToken).toHaveBeenCalledWith(USER_ID);
+  });
+
   it("no expone el hash ni el token dentro del usuario público", async () => {
     mockUser(makeUser());
 

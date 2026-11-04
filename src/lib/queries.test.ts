@@ -21,6 +21,7 @@ import {
   getUsers,
   login,
   logout,
+  reactivateUser,
   updateCategory,
   updateProduct,
   updateSupplier,
@@ -44,6 +45,7 @@ import {
   loginMutationOptions,
   logoutMutationOptions,
   meQueryOptions,
+  reactivateUserMutationOptions,
   movementsQueryOptions,
   productMovementsQueryOptions,
   productQueryOptions,
@@ -80,6 +82,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
   deleteSupplier: vi.fn(),
   createUser: vi.fn(),
   deactivateUser: vi.fn(),
+  reactivateUser: vi.fn(),
   createMovement: vi.fn(),
   getMe: vi.fn(),
   login: vi.fn(),
@@ -663,6 +666,42 @@ describe("deactivateUserMutationOptions", () => {
     );
     vi.mocked(deactivateUser).mockRejectedValue(apiError);
     const options = deactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).rejects.toBe(apiError);
+  });
+});
+
+describe("reactivateUserMutationOptions", () => {
+  it("envía el id a reactivateUser y devuelve el usuario activo", async () => {
+    const client = new QueryClient();
+    const active = { ...MANAGED_USER, isActive: true };
+    vi.mocked(reactivateUser).mockResolvedValue(active);
+    const options = reactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).resolves.toEqual(active);
+
+    expect(reactivateUser).toHaveBeenCalledWith(MANAGED_USER.id);
+  });
+
+  it("invalida la raíz de usuarios al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    reactivateUserMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error(
+      "No puedes reactivar tu propia cuenta",
+    );
+    vi.mocked(reactivateUser).mockRejectedValue(apiError);
+    const options = reactivateUserMutationOptions(client);
 
     await expect(options.mutationFn(MANAGED_USER.id)).rejects.toBe(apiError);
   });

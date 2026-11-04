@@ -74,6 +74,66 @@ export async function createUser(input: unknown): Promise<UserDTO> {
   }
 }
 
+export async function reactivateUser(
+  id: string,
+  actorId: string,
+): Promise<UserDTO> {
+  try {
+    assertValidId(id);
+
+    if (isSameId(id, actorId)) {
+      throw new AppError({
+        kind: "FORBIDDEN",
+        message: "No puedes reactivar tu propia cuenta",
+      });
+    }
+
+    await connectDB();
+
+    const user = await UserModel.findOne({ _id: id })
+      .select("email role isActive createdAt")
+      .lean();
+
+    if (!user) {
+      throw new AppError({
+        kind: "NOT_FOUND",
+        message: "El usuario no existe",
+      });
+    }
+
+    if (user.isActive) {
+      return toUserDTO(user);
+    }
+
+    const updated = await UserModel.findOneAndUpdate(
+      { _id: id, isActive: false },
+      { $set: { isActive: true } },
+      { new: true },
+    )
+      .select("email role isActive createdAt")
+      .lean();
+
+    if (!updated) {
+      const current = await UserModel.findOne({ _id: id })
+        .select("email role isActive createdAt")
+        .lean();
+
+      if (!current) {
+        throw new AppError({
+          kind: "NOT_FOUND",
+          message: "El usuario no existe",
+        });
+      }
+
+      return toUserDTO(current);
+    }
+
+    return toUserDTO(updated);
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+
 export async function deactivateUser(
   id: string,
   actorId: string,

@@ -250,6 +250,12 @@ export async function deactivateUser(id: string): Promise<UserDTO> {
   });
 }
 
+export async function reactivateUser(id: string): Promise<UserDTO> {
+  return fetchJson(`/api/users/${id}/reactivate`, userSchema, {
+    method: "POST",
+  });
+}
+
 export async function getProducts(
   signal?: AbortSignal,
 ): Promise<ProductDTO[]> {
