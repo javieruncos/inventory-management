@@ -1,5 +1,8 @@
 import type { ProductDTO } from "@/types/product";
-import type { StockMovementDTO } from "@/types/stockMovement";
+import type {
+  StockMovementDTO,
+  StockMovementWithProductDTO,
+} from "@/types/stockMovement";
 
 //TYPES
 export type StockStatus = "outOfStock" | "lowStock" | "normal";
@@ -22,16 +25,7 @@ export type LowStockAlerts = {
 };
 
 //ESTRUCTURA DE MOVIMIENTOS CON PRODUCTO
-export type MovementWithProduct = {
-  _id: string;
-  productId: string;
-  type: "IN" | "OUT";
-  quantity: number;
-  reason: string;
-  createdAt: string;
-  __v?: number;
-  product: ProductDTO | null;
-};
+export type MovementWithProduct = StockMovementWithProductDTO;
 
 //CONSTANTES POR DEFECTO PARA EL LLIMIT DE MOVIMIENTOS RECIENTES
 export const DEFAULT_RECENT_MOVEMENTS_LIMIT = 6;
@@ -121,23 +115,9 @@ export function getLowStockAlerts(
   };
 }
 
-//AÑADIR PRODUCTO A LOS MOVIMIENTOS MEDIANTE SU ID
-export function attachProducts(
-  movements: StockMovementDTO[],
-  products: ProductDTO[],
-): MovementWithProduct[] {
-  const productsById = new Map(products.map((product) => [product._id, product]));
-
-  return movements.map((movement) => ({
-    ...movement,
-    product: productsById.get(movement.productId) ?? null,
-  }));
-}
-
 //OBTENER MOVIMIENTOS RECIENTES Y ORDENADOS POR FECHA DESCENDENTE
 export function getRecentMovements(
-  movements: StockMovementDTO[],
-  products: ProductDTO[],
+  movements: StockMovementWithProductDTO[],
   options?: { limit?: number },
 ): MovementWithProduct[] {
   const limit = Math.max(
@@ -149,14 +129,14 @@ export function getRecentMovements(
     (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
   );
 
-  return attachProducts(sorted, products).slice(0, limit);
+  return sorted.slice(0, limit);
 }
 
 //FILTRAR MOVIMIENTOS POR TIPO
-export function filterMovements(
-  movements: StockMovementDTO[],
+export function filterMovements<T extends StockMovementDTO>(
+  movements: T[],
   filter: MovementFilter,
-): StockMovementDTO[] {
+): T[] {
   if (filter === "ALL") {
     return [...movements];
   }

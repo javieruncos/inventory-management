@@ -4,6 +4,7 @@ import {
   parseJsonBody,
   type IdRouteContext,
 } from "@/app/api/_lib/http";
+import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
 import { deleteProduct, getProduct, updateProduct } from "@/lib/products";
 
 export async function GET(
@@ -11,6 +12,8 @@ export async function GET(
   { params }: IdRouteContext,
 ): Promise<Response> {
   try {
+    await requireUser();
+
     const { id } = await params;
 
     const product = await getProduct(id);
@@ -26,6 +29,8 @@ export async function PUT(
   { params }: IdRouteContext,
 ): Promise<Response> {
   try {
+    await requireAdmin();
+
     const { id } = await params;
 
     const body = await parseJsonBody(request);
@@ -43,6 +48,8 @@ export async function DELETE(
   { params }: IdRouteContext,
 ): Promise<Response> {
   try {
+    await requireAdmin();
+
     const { id } = await params;
 
     const deleted = await deleteProduct(id);

@@ -1,8 +1,11 @@
 import { errorResponse, ok, parseJsonBody } from "@/app/api/_lib/http";
+import { requireUser } from "@/lib/auth/auth-guards";
 import { createMovement, listMovements } from "@/lib/stock";
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    await requireUser();
+
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId") ?? undefined;
 
@@ -16,6 +19,8 @@ export async function GET(request: Request): Promise<Response> {
 
 export async function POST(request: Request): Promise<Response> {
   try {
+    await requireUser();
+
     const body = await parseJsonBody(request);
 
     const movement = await createMovement(body);

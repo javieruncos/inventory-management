@@ -6,6 +6,10 @@ import StockMovementModel, {
   type StockMovement,
 } from "@/db/models/StockMovement";
 import { AppError, normalizeError } from "@/lib/errors";
+import type {
+  MovementProductDTO,
+  StockMovementWithProductDTO,
+} from "@/types/stockMovement";
 
 type MovementType = "IN" | "OUT";
 
@@ -202,7 +206,7 @@ export async function createMovement(input: unknown): Promise<StockMovement> {
 
 export async function listMovements(
   productId?: string,
-): Promise<StockMovement[]> {
+): Promise<StockMovementWithProductDTO[]> {
   try {
     if (productId !== undefined) {
       if (
@@ -219,9 +223,45 @@ export async function listMovements(
 
     await connectDB();
 
-    return await StockMovementModel.find(
+    const movements = await StockMovementModel.find(
       productId !== undefined ? { productId } : {},
     ).sort({ createdAt: -1 });
+
+    if (movements.length === 0) {
+      return [];
+    }
+
+    const productIds = [
+      ...new Set(movements.map((movement) => movement.productId.toString())),
+    ];
+
+    const products = await ProductModel.find({
+      _id: { $in: productIds },
+    })
+      .select("_id name sku deletedAt")
+      .lean();
+
+    const productsById = new Map<string, MovementProductDTO>(
+      products.map((product) => [
+        product._id.toString(),
+        {
+          _id: product._id.toString(),
+          name: product.name,
+          sku: product.sku,
+          deletedAt: product.deletedAt ? product.deletedAt.toISOString() : null,
+        },
+      ]),
+    );
+
+    return movements.map((movement) => ({
+      _id: movement._id.toString(),
+      productId: movement.productId.toString(),
+      type: movement.type,
+      quantity: movement.quantity,
+      reason: movement.reason,
+      createdAt: movement.createdAt.toISOString(),
+      product: productsById.get(movement.productId.toString()) ?? null,
+    }));
   } catch (error) {
     throw normalizeError(error);
   }

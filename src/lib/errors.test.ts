@@ -3,6 +3,12 @@ import mongoose from "mongoose";
 import { z } from "zod";
 import { createProductSchema } from "@/schemas/product";
 import ProductModel from "@/db/models/Product";
+import {
+  AuthenticationRequiredError,
+  ForbiddenError,
+} from "@/lib/auth/auth-errors";
+import { InvalidCredentialsError } from "@/lib/auth/auth-service";
+import { JwtConfigurationError } from "@/lib/auth/jwt";
 import { AppError, normalizeError } from "@/lib/errors";
 
 describe("normalizeError", () => {
@@ -105,6 +111,39 @@ describe("normalizeError", () => {
     expect(result.cause).toBe(thrown);
   });
 
+  it("conserva AuthenticationRequiredError como UNAUTHORIZED", () => {
+    const error = new AuthenticationRequiredError();
+
+    expect(normalizeError(error)).toBe(error);
+    expect(error).toMatchObject({
+      kind: "UNAUTHORIZED",
+      status: 401,
+      message: "No autenticado",
+    });
+  });
+
+  it("conserva ForbiddenError como FORBIDDEN", () => {
+    const error = new ForbiddenError();
+
+    expect(normalizeError(error)).toBe(error);
+    expect(error).toMatchObject({
+      kind: "FORBIDDEN",
+      status: 403,
+      message: "No autorizado",
+    });
+  });
+
+  it("conserva InvalidCredentialsError como UNAUTHORIZED", () => {
+    const error = new InvalidCredentialsError();
+
+    expect(normalizeError(error)).toBe(error);
+    expect(error).toMatchObject({
+      kind: "UNAUTHORIZED",
+      status: 401,
+      message: "Credenciales inválidas",
+    });
+  });
+
   it("convierte un error desconocido en AppError kind INTERNAL", () => {
     const unknownError = new Error("Algo inesperado ocurrió");
 
@@ -114,5 +153,18 @@ describe("normalizeError", () => {
     expect(result.kind).toBe("INTERNAL");
     expect(result.message).toBe("Error interno del servidor");
     expect(result.cause).toBe(unknownError);
+  });
+
+  it("convierte JwtConfigurationError en INTERNAL sin exponer el secreto", () => {
+    const configError = new JwtConfigurationError(
+      "JWT_SECRET debe tener al menos 32 caracteres",
+    );
+
+    const result = normalizeError(configError);
+
+    expect(result).toBeInstanceOf(AppError);
+    expect(result.kind).toBe("INTERNAL");
+    expect(result.message).toBe("Error interno del servidor");
+    expect(result.cause).toBe(configError);
   });
 });

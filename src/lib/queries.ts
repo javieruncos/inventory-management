@@ -5,33 +5,48 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import {
+  ApiError,
   createCategory,
   createMovement,
   createProduct,
   createSupplier,
+  createUser,
+  deactivateUser,
   deleteCategory,
   deleteProduct,
   deleteSupplier,
   getCategories,
+  getMe,
   getMovements,
   getMovementsByProduct,
   getProduct,
   getProducts,
   getSuppliers,
+  getUsers,
+  login,
+  logout,
+  reactivateUser,
   updateCategory,
   updateProduct,
   updateSupplier,
+  type AuthUser,
   type UpdateCategoryInput,
   type UpdateProductInput,
   type UpdateSupplierInput,
 } from "@/lib/api";
+import type { LoginInput } from "@/schemas/auth";
 import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import type { CreateSupplierInput } from "@/schemas/supplier";
+import type { CreateUserInput } from "@/schemas/user";
 import type { StockMovementDTO } from "@/types/stockMovement";
 
 export const queryKeys = {
+  auth: {
+    all: ["auth"] as const,
+    me: ["auth", "me"] as const,
+  },
   products: {
     all: ["products"] as const,
     list: ["products", "list"] as const,
@@ -49,6 +64,10 @@ export const queryKeys = {
   suppliers: {
     all: ["suppliers"] as const,
     list: ["suppliers", "list"] as const,
+  },
+  users: {
+    all: ["users"] as const,
+    list: ["users", "list"] as const,
   },
 };
 
@@ -73,6 +92,86 @@ export function toViewStatus(query: QuerySnapshot): QueryViewStatus {
   if (query.isFetching) return "loading";
   if (query.isError) return "error";
   return "loading";
+}
+
+export function meQueryOptions() {
+  return {
+    queryKey: queryKeys.auth.me,
+    queryFn: async ({
+      signal,
+    }: {
+      signal: AbortSignal;
+    }): Promise<AuthUser | null> => {
+      try {
+        return await getMe(signal);
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          (error.status === 401 || error.kind === "UNAUTHORIZED")
+        ) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  };
+}
+
+export function useMe() {
+  return useQuery(meQueryOptions());
+}
+
+export function loginMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (input: LoginInput) => login(input),
+    onSuccess: (user: AuthUser) => {
+      queryClient.setQueryData(queryKeys.auth.me, user);
+    },
+  };
+}
+
+export function useLogin() {
+  const queryClient = useQueryClient();
+  return useMutation(loginMutationOptions(queryClient));
+}
+
+const PRIVATE_QUERY_ROOTS = [
+  queryKeys.products.all,
+  queryKeys.movements.all,
+  queryKeys.categories.all,
+  queryKeys.suppliers.all,
+  queryKeys.users.all,
+] as const;
+
+export async function purgePrivateQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await Promise.all(
+    PRIVATE_QUERY_ROOTS.map((queryKey) =>
+      queryClient.cancelQueries({ queryKey }),
+    ),
+  );
+
+  for (const queryKey of PRIVATE_QUERY_ROOTS) {
+    queryClient.removeQueries({ queryKey });
+  }
+}
+
+export function logoutMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: () => logout(),
+    onSuccess: async () => {
+      await purgePrivateQueries(queryClient);
+      queryClient.setQueryData(queryKeys.auth.me, null);
+    },
+  };
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation(logoutMutationOptions(queryClient));
 }
 
 export function productsQueryOptions() {
@@ -100,6 +199,13 @@ export function suppliersQueryOptions() {
   return {
     queryKey: queryKeys.suppliers.list,
     queryFn: ({ signal }: { signal: AbortSignal }) => getSuppliers(signal),
+  };
+}
+
+export function usersQueryOptions() {
+  return {
+    queryKey: queryKeys.users.list,
+    queryFn: ({ signal }: { signal: AbortSignal }) => getUsers(signal),
   };
 }
 
@@ -132,6 +238,10 @@ export function useCategories() {
 
 export function useSuppliers() {
   return useQuery(suppliersQueryOptions());
+}
+
+export function useUsers() {
+  return useQuery(usersQueryOptions());
 }
 
 const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/;
@@ -276,6 +386,46 @@ export function useUpdateSupplier() {
 export function useDeleteSupplier() {
   const queryClient = useQueryClient();
   return useMutation(deleteSupplierMutationOptions(queryClient));
+}
+
+function invalidateUsers(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+}
+
+export function createUserMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (input: CreateUserInput) => createUser(input),
+    onSuccess: () => invalidateUsers(queryClient),
+  };
+}
+
+export function deactivateUserMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (id: string) => deactivateUser(id),
+    onSuccess: () => invalidateUsers(queryClient),
+  };
+}
+
+export function reactivateUserMutationOptions(queryClient: QueryClient) {
+  return {
+    mutationFn: (id: string) => reactivateUser(id),
+    onSuccess: () => invalidateUsers(queryClient),
+  };
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  return useMutation(createUserMutationOptions(queryClient));
+}
+
+export function useDeactivateUser() {
+  const queryClient = useQueryClient();
+  return useMutation(deactivateUserMutationOptions(queryClient));
+}
+
+export function useReactivateUser() {
+  const queryClient = useQueryClient();
+  return useMutation(reactivateUserMutationOptions(queryClient));
 }
 
 function invalidateStockData(

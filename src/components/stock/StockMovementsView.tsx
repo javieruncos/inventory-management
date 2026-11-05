@@ -1,19 +1,15 @@
 "use client";
 
 import { useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Plus, TriangleAlert } from "lucide-react";
+import { Plus } from "lucide-react";
 import { MovementFormDialog } from "@/components/stock/MovementFormDialog";
 import { StockMovementsList } from "@/components/stock/StockMovementsList";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import {
-  attachProducts,
-  filterMovements,
-  type MovementFilter,
-} from "@/lib/dashboard";
-import { toViewStatus, useMovements, useProducts } from "@/lib/queries";
+import { filterMovements, type MovementFilter } from "@/lib/dashboard";
+import { toViewStatus, useMovements } from "@/lib/queries";
 
 const pulseClass =
   "animate-pulse motion-reduce:animate-none bg-surface-nested";
@@ -52,57 +48,9 @@ function StockMovementsSkeleton() {
   );
 }
 
-type ProductsQueryNoticeProps = {
-  status: "loading" | "error";
-  errorMessage?: string;
-  onRetry: () => void;
-};
-
-function ProductsQueryNotice({
-  status,
-  errorMessage,
-  onRetry,
-}: ProductsQueryNoticeProps) {
-  if (status === "loading") {
-    return (
-      <p role="status" className="text-body text-text-secondary">
-        Cargando nombres de productos…
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-3 rounded-card border border-border bg-surface p-4 shadow-card">
-      <p
-        role="alert"
-        className="flex items-start gap-1.5 text-text-secondary"
-      >
-        <TriangleAlert
-          aria-hidden="true"
-          className="mt-px size-4 shrink-0 text-status-out-text"
-        />
-        <span className="flex flex-col gap-1">
-          <span className="text-body">
-            {errorMessage ?? "No se pudieron cargar los productos."}
-          </span>
-          <span className="text-caption">
-            Los movimientos siguen visibles, pero sus nombres no están
-            disponibles.
-          </span>
-        </span>
-      </p>
-      <Button variant="secondary" onClick={onRetry}>
-        Reintentar
-      </Button>
-    </div>
-  );
-}
-
 export function StockMovementsView() {
   const movementsQuery = useMovements();
-  const productsQuery = useProducts();
   const status = toViewStatus(movementsQuery);
-  const productsStatus = toViewStatus(productsQuery);
   const [filter, setFilter] = useState<MovementFilter>("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -121,20 +69,8 @@ export function StockMovementsView() {
     void movementsQuery.refetch();
   };
 
-  const retryProducts = () => {
-    void productsQuery.refetch();
-  };
-
-  const productsErrorMessage =
-    productsStatus === "error"
-      ? productsQuery.error instanceof ApiError
-        ? productsQuery.error.message
-        : "No se pudieron cargar los productos."
-      : undefined;
-
   const movements = movementsQuery.data ?? [];
   const filtered = filterMovements(movements, filter);
-  const joined = attachProducts(filtered, productsQuery.data ?? []);
 
   let body: ReactNode;
 
@@ -162,7 +98,7 @@ export function StockMovementsView() {
         No hay movimientos registrados.
       </p>
     );
-  } else if (joined.length === 0) {
+  } else if (filtered.length === 0) {
     body = (
       <p className="text-body text-text-secondary">
         No hay movimientos que coincidan con el filtro.
@@ -170,25 +106,10 @@ export function StockMovementsView() {
     );
   } else {
     body = (
-      <>
-        {productsStatus === "loading" ? (
-          <ProductsQueryNotice
-            status="loading"
-            onRetry={retryProducts}
-          />
-        ) : productsStatus === "error" ? (
-          <ProductsQueryNotice
-            status="error"
-            errorMessage={productsErrorMessage}
-            onRetry={retryProducts}
-          />
-        ) : null}
-        <StockMovementsList
-          movements={joined}
-          totalMovements={movements.length}
-          productsStatus={productsStatus}
-        />
-      </>
+      <StockMovementsList
+        movements={filtered}
+        totalMovements={movements.length}
+      />
     );
   }
 
@@ -231,12 +152,7 @@ export function StockMovementsView() {
         </div>
         <section
           aria-label="Listado de movimientos de stock"
-          aria-busy={
-            status === "loading" ||
-            (status === "ready" &&
-              productsStatus === "loading" &&
-              joined.length > 0)
-          }
+          aria-busy={status === "loading"}
           className="flex flex-col gap-4"
         >
           {body}

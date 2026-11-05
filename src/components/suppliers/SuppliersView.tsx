@@ -13,6 +13,7 @@ import { SupplierFormDialog } from "@/components/suppliers/SupplierFormDialog";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
+import { useCanManageCatalog } from "@/lib/auth/useCanManageCatalog";
 import { cn } from "@/lib/cn";
 import {
   toViewStatus,
@@ -40,7 +41,7 @@ function deleteErrorMessage(error: unknown): string {
   return "No se pudo completar la operación. Intentá nuevamente.";
 }
 
-function SuppliersSkeleton() {
+function SuppliersSkeleton({ canManage }: { canManage: boolean }) {
   return (
     <div className="flex flex-col gap-4" aria-hidden="true">
       {Array.from({ length: 4 }, (_, index) => (
@@ -57,10 +58,12 @@ function SuppliersSkeleton() {
                 className={cn("h-3 w-64 max-w-full rounded-sm", pulseClass)}
               />
             </span>
-            <span className="flex shrink-0 items-center gap-2">
-              <span className={cn("size-8 rounded-control", pulseClass)} />
-              <span className={cn("size-8 rounded-control", pulseClass)} />
-            </span>
+            {canManage ? (
+              <span className="flex shrink-0 items-center gap-2">
+                <span className={cn("size-8 rounded-control", pulseClass)} />
+                <span className={cn("size-8 rounded-control", pulseClass)} />
+              </span>
+            ) : null}
           </div>
         </div>
       ))}
@@ -69,6 +72,7 @@ function SuppliersSkeleton() {
 }
 
 export function SuppliersView() {
+  const canManage = useCanManageCatalog();
   const suppliersQuery = useSuppliers();
   const deleteMutation = useDeleteSupplier();
   const status = toViewStatus(suppliersQuery);
@@ -122,7 +126,7 @@ export function SuppliersView() {
   let body: ReactNode;
 
   if (status === "loading") {
-    body = <SuppliersSkeleton />;
+    body = <SuppliersSkeleton canManage={canManage} />;
   } else if (status === "error") {
     body = (
       <div
@@ -150,6 +154,7 @@ export function SuppliersView() {
       <SuppliersList
         suppliers={suppliers}
         totalSuppliers={suppliers.length}
+        canManage={canManage}
         onEdit={openEdit}
         onDelete={handleDelete}
       />
@@ -166,10 +171,12 @@ export function SuppliersView() {
           title="Proveedores"
           subtitle="Proveedores del inventario."
           actions={
-            <Button onClick={openCreate}>
-              <Plus aria-hidden="true" size={16} />
-              Nuevo proveedor
-            </Button>
+            canManage ? (
+              <Button onClick={openCreate}>
+                <Plus aria-hidden="true" size={16} />
+                Nuevo proveedor
+              </Button>
+            ) : undefined
           }
         />
         <section

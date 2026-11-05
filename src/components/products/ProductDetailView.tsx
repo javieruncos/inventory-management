@@ -26,6 +26,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TrendPill } from "@/components/ui/TrendPill";
 import { ApiError } from "@/lib/api";
+import { useCanManageCatalog } from "@/lib/auth/useCanManageCatalog";
 import { cn } from "@/lib/cn";
 import { getStockStatus } from "@/lib/dashboard";
 import {
@@ -321,6 +322,7 @@ type DetailDialog = "edit" | "movement" | null;
 
 export function ProductDetailView({ productId }: ProductDetailViewProps) {
   const router = useRouter();
+  const canManage = useCanManageCatalog();
   const productQuery = useProduct(productId);
   const movementsQuery = useProductMovements(productId);
   const categoriesQuery = useCategories();
@@ -397,7 +399,7 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
   const handleDelete = async () => {
     const result = await confirmDelete({
       title: "Eliminar producto",
-      text: `Se quitará "${product.name}" (SKU: ${product.sku}) del listado y del inventario. El registro se conservará archivado; no se elimina de forma permanente.`,
+      text: `Solo se puede archivar cuando el stock actual es 0. Se quitará "${product.name}" (SKU: ${product.sku}) del listado; el registro y sus movimientos históricos se conservarán archivados.`,
       confirmText: "Eliminar",
       cancelText: "Cancelar",
       onConfirm: async () => {
@@ -453,20 +455,24 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
                 <ArrowLeftRight aria-hidden="true" size={16} />
                 Registrar movimiento
               </Button>
-              <Button
-                variant="secondary"
-                onClick={openEdit}
-                disabled={deleteMutation.isPending}
-              >
-                <Pencil aria-hidden="true" size={16} />
-                Editar
-              </Button>
-              <IconButton
-                label={`Eliminar ${product.name}`}
-                icon={<Trash size={16} />}
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-              />
+              {canManage ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={openEdit}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Pencil aria-hidden="true" size={16} />
+                    Editar
+                  </Button>
+                  <IconButton
+                    label={`Eliminar ${product.name}`}
+                    icon={<Trash size={16} />}
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                  />
+                </>
+              ) : null}
             </div>
           }
         />

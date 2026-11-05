@@ -1,11 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProductDTO } from "@/types/product";
-import type { StockMovementDTO } from "@/types/stockMovement";
+import type { StockMovementWithProductDTO } from "@/types/stockMovement";
 import { ApiError, getMovements, getProducts } from "@/lib/api";
 import {
   DEFAULT_LOW_STOCK_LIMIT,
   DEFAULT_RECENT_MOVEMENTS_LIMIT,
-  attachProducts,
   filterMovements,
   getLowStockAlerts,
   getRecentMovements,
@@ -41,8 +40,8 @@ function makeProduct(overrides: Partial<ProductDTO> = {}): ProductDTO {
 }
 
 function makeMovement(
-  overrides: Partial<StockMovementDTO> = {},
-): StockMovementDTO {
+  overrides: Partial<StockMovementWithProductDTO> = {},
+): StockMovementWithProductDTO {
   return {
     _id: makeId(0x71),
     productId: makeId(0x41),
@@ -51,6 +50,7 @@ function makeMovement(
     reason: "Recepción de mercadería",
     createdAt: "2026-01-02T10:00:00.000Z",
     __v: 0,
+    product: null,
     ...overrides,
   };
 }
@@ -293,29 +293,6 @@ describe("getLowStockAlerts", () => {
   });
 });
 
-describe("attachProducts", () => {
-  it("asocia el producto disponible al movimiento", () => {
-    const product = makeProduct();
-    const movement = makeMovement();
-
-    expect(attachProducts([movement], [product])).toEqual([
-      { ...movement, product },
-    ]);
-  });
-
-  it("devuelve null cuando el producto ya no está disponible", () => {
-    const movement = makeMovement({ productId: makeId(0x42) });
-
-    expect(attachProducts([movement], [makeProduct()])).toEqual([
-      { ...movement, product: null },
-    ]);
-  });
-
-  it("devuelve una lista vacía sin movimientos", () => {
-    expect(attachProducts([], [makeProduct()])).toEqual([]);
-  });
-});
-
 describe("getRecentMovements", () => {
   it("ordena por fecha descendente sin importar el orden de entrada", () => {
     const older = makeMovement({
@@ -331,7 +308,7 @@ describe("getRecentMovements", () => {
       createdAt: "2026-01-02T09:00:00.000Z",
     });
 
-    const result = getRecentMovements([older, newest, middle], []);
+    const result = getRecentMovements([older, newest, middle]);
 
     expect(result.map((item) => item._id)).toEqual([
       newest._id,
@@ -351,7 +328,7 @@ describe("getRecentMovements", () => {
     });
     const movements = [older, newest];
 
-    getRecentMovements(movements, []);
+    getRecentMovements(movements);
 
     expect(movements.map((item) => item._id)).toEqual([older._id, newest._id]);
   });
@@ -372,7 +349,7 @@ describe("getRecentMovements", () => {
       }),
     ];
 
-    const result = getRecentMovements(movements, [], { limit: 2 });
+    const result = getRecentMovements(movements, { limit: 2 });
 
     expect(result.map((item) => item._id)).toEqual([
       makeId(0x79),
@@ -391,7 +368,7 @@ describe("getRecentMovements", () => {
         }),
     );
 
-    const result = getRecentMovements(movements, []);
+    const result = getRecentMovements(movements);
 
     expect(result).toHaveLength(DEFAULT_RECENT_MOVEMENTS_LIMIT);
     expect(result[0]?.createdAt).toBe(
@@ -401,7 +378,7 @@ describe("getRecentMovements", () => {
 
   it("devuelve vacío con límite 0", () => {
     expect(
-      getRecentMovements([makeMovement()], [], { limit: 0 }),
+      getRecentMovements([makeMovement()], { limit: 0 }),
     ).toEqual([]);
   });
 
@@ -410,6 +387,7 @@ describe("getRecentMovements", () => {
     const target = makeMovement({
       _id: makeId(0x90),
       productId: product._id,
+      product,
       createdAt: "2026-01-05T09:00:00.000Z",
     });
     const other = makeMovement({
@@ -418,7 +396,7 @@ describe("getRecentMovements", () => {
       createdAt: "2026-01-04T09:00:00.000Z",
     });
 
-    const result = getRecentMovements([other, target], [product]);
+    const result = getRecentMovements([other, target]);
 
     expect(result[0]?._id).toBe(target._id);
     expect(result[0]?.product).toEqual(product);
@@ -426,7 +404,7 @@ describe("getRecentMovements", () => {
   });
 
   it("devuelve vacío sin movimientos", () => {
-    expect(getRecentMovements([], [makeProduct()])).toEqual([]);
+    expect(getRecentMovements([])).toEqual([]);
   });
 });
 

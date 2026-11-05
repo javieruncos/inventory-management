@@ -13,6 +13,7 @@ import {
 import CategoryModel from "@/db/models/Category";
 import SupplierModel from "@/db/models/Supplier";
 import ProductModel, { type Product } from "@/db/models/Product";
+import StockMovementModel from "@/db/models/StockMovement";
 
 vi.mock("@/db/connection", () => ({
   connectDB: vi.fn().mockResolvedValue(undefined),
@@ -1191,20 +1192,31 @@ describe("deleteProduct", () => {
       ) => Promise<Product | null>
     >;
     updateSpy.mockResolvedValue(product);
+    const stockUpdateSpy = vi.spyOn(ProductModel, "updateOne");
+    const movementCreateSpy = vi.spyOn(StockMovementModel, "create");
 
     const result = await deleteProduct("64b000000000000000000008");
 
     expect(result).toBe(product);
     expect(updateSpy).toHaveBeenCalledWith(
-      { _id: "64b000000000000000000008", deletedAt: null },
+      {
+        _id: "64b000000000000000000008",
+        deletedAt: null,
+        currentStock: 0,
+      },
       { deletedAt: expect.any(Date) },
       { new: true },
     );
+    expect(stockUpdateSpy).not.toHaveBeenCalled();
+    expect(movementCreateSpy).not.toHaveBeenCalled();
 
     updateSpy.mockRestore();
+    stockUpdateSpy.mockRestore();
+    movementCreateSpy.mockRestore();
   });
 
   it("devuelve NOT_FOUND cuando el producto no existe o está eliminado", async () => {
+    const existsSpy = vi.spyOn(ProductModel, "exists").mockResolvedValue(null);
     const updateSpy = vi.spyOn(
       ProductModel,
       "findOneAndUpdate",
@@ -1232,12 +1244,77 @@ describe("deleteProduct", () => {
     expect(result.kind).toBe("NOT_FOUND");
     expect(result.message).toBe("El producto no existe");
     expect(updateSpy).toHaveBeenCalledWith(
-      { _id: "64b000000000000000000009", deletedAt: null },
+      {
+        _id: "64b000000000000000000009",
+        deletedAt: null,
+        currentStock: 0,
+      },
       { deletedAt: expect.any(Date) },
       { new: true },
     );
+    expect(existsSpy).toHaveBeenCalledWith({
+      _id: "64b000000000000000000009",
+      deletedAt: null,
+    });
 
     updateSpy.mockRestore();
+    existsSpy.mockRestore();
+  });
+
+  it("devuelve CONFLICT cuando el producto activo tiene stock disponible", async () => {
+    const existsSpy = vi.spyOn(ProductModel, "exists").mockResolvedValue({
+      _id: new Types.ObjectId("64b000000000000000000010"),
+    });
+    const updateSpy = vi.spyOn(
+      ProductModel,
+      "findOneAndUpdate",
+    ) as unknown as MockInstance<
+      (
+        filter?: unknown,
+        update?: unknown,
+        options?: unknown,
+      ) => Promise<Product | null>
+    >;
+    updateSpy.mockResolvedValue(null);
+    const stockUpdateSpy = vi.spyOn(ProductModel, "updateOne");
+    const movementCreateSpy = vi.spyOn(StockMovementModel, "create");
+
+    let thrown: unknown;
+
+    try {
+      await deleteProduct("64b000000000000000000010");
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("CONFLICT");
+    expect(result.message).toBe(
+      "No se puede archivar un producto con stock disponible. Registrá una salida hasta dejarlo en 0 antes de archivarlo.",
+    );
+    expect(updateSpy).toHaveBeenCalledWith(
+      {
+        _id: "64b000000000000000000010",
+        deletedAt: null,
+        currentStock: 0,
+      },
+      { deletedAt: expect.any(Date) },
+      { new: true },
+    );
+    expect(existsSpy).toHaveBeenCalledWith({
+      _id: "64b000000000000000000010",
+      deletedAt: null,
+    });
+    expect(stockUpdateSpy).not.toHaveBeenCalled();
+    expect(movementCreateSpy).not.toHaveBeenCalled();
+
+    updateSpy.mockRestore();
+    existsSpy.mockRestore();
+    stockUpdateSpy.mockRestore();
+    movementCreateSpy.mockRestore();
   });
 
   it("rechaza un ID que no es string", async () => {

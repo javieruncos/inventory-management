@@ -1,23 +1,33 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import {
+  ApiError,
   createCategory,
   createMovement,
   createProduct,
   createSupplier,
+  createUser,
+  deactivateUser,
   deleteCategory,
   deleteProduct,
   deleteSupplier,
   getCategories,
+  getMe,
   getMovements,
   getMovementsByProduct,
   getProduct,
   getProducts,
   getSuppliers,
+  getUsers,
+  login,
+  logout,
+  reactivateUser,
   updateCategory,
   updateProduct,
   updateSupplier,
+  type AuthUser,
 } from "@/lib/api";
+import type { LoginInput } from "@/schemas/auth";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import {
@@ -26,10 +36,16 @@ import {
   createMovementMutationOptions,
   createProductMutationOptions,
   createSupplierMutationOptions,
+  createUserMutationOptions,
+  deactivateUserMutationOptions,
   deleteCategoryMutationOptions,
   deleteProductMutationOptions,
   deleteSupplierMutationOptions,
   isValidObjectId,
+  loginMutationOptions,
+  logoutMutationOptions,
+  meQueryOptions,
+  reactivateUserMutationOptions,
   movementsQueryOptions,
   productMovementsQueryOptions,
   productQueryOptions,
@@ -39,17 +55,22 @@ import {
   suppliersQueryOptions,
   toViewStatus,
   updateCategoryMutationOptions,
+  usersQueryOptions,
   updateProductMutationOptions,
   updateSupplierMutationOptions,
 } from "@/lib/queries";
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+  return {
+    ...actual,
   getProducts: vi.fn(),
   getProduct: vi.fn(),
   getMovements: vi.fn(),
   getMovementsByProduct: vi.fn(),
   getCategories: vi.fn(),
   getSuppliers: vi.fn(),
+  getUsers: vi.fn(),
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
@@ -59,8 +80,15 @@ vi.mock("@/lib/api", () => ({
   createSupplier: vi.fn(),
   updateSupplier: vi.fn(),
   deleteSupplier: vi.fn(),
+  createUser: vi.fn(),
+  deactivateUser: vi.fn(),
+  reactivateUser: vi.fn(),
   createMovement: vi.fn(),
-}));
+  getMe: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
+  };
+});
 
 const PRODUCT = {
   _id: "507f1f77bcf86cd799439011",
@@ -111,6 +139,20 @@ const CREATE_INPUT: CreateProductInput = {
   supplierId: undefined,
 };
 
+const AUTH_USER: AuthUser = {
+  id: "507f1f77bcf86cd799439011",
+  email: "admin@example.com",
+  role: "admin",
+};
+
+const MANAGED_USER = {
+  id: "507f1f77bcf86cd799439021",
+  email: "user@example.com",
+  role: "user" as const,
+  isActive: true,
+  createdAt: "2026-01-01T10:00:00.000Z",
+};
+
 describe("queryKeys", () => {
   it("la clave de lista vive bajo el prefijo de su dominio", () => {
     expect(
@@ -137,6 +179,12 @@ describe("queryKeys", () => {
   it("los dominios de productos y movimientos son distintos", () => {
     expect(queryKeys.products.all).not.toEqual(queryKeys.movements.all);
     expect(queryKeys.products.list).not.toEqual(queryKeys.movements.list);
+  });
+
+  it("la clave de sesión de auth vive bajo el prefijo auth", () => {
+    expect(queryKeys.auth.me.slice(0, queryKeys.auth.all.length)).toEqual(
+      queryKeys.auth.all,
+    );
   });
 });
 
@@ -238,6 +286,7 @@ describe("queryKeys de categorías y proveedores", () => {
       queryKeys.movements.all,
       queryKeys.categories.all,
       queryKeys.suppliers.all,
+      queryKeys.auth.all,
     ];
 
     for (let i = 0; i < domains.length; i += 1) {
@@ -281,6 +330,24 @@ describe("suppliersQueryOptions", () => {
     ).resolves.toEqual([SUPPLIER]);
 
     expect(getSuppliers).toHaveBeenCalledWith(controller.signal);
+  });
+});
+
+describe("usersQueryOptions", () => {
+  it("usa la clave de lista de usuarios", () => {
+    expect(usersQueryOptions().queryKey).toEqual(queryKeys.users.list);
+  });
+
+  it("delega el signal de TanStack Query en getUsers", async () => {
+    const options = usersQueryOptions();
+    const controller = new AbortController();
+    vi.mocked(getUsers).mockResolvedValue([MANAGED_USER]);
+
+    await expect(
+      options.queryFn({ signal: controller.signal }),
+    ).resolves.toEqual([MANAGED_USER]);
+
+    expect(getUsers).toHaveBeenCalledWith(controller.signal);
   });
 });
 
@@ -538,6 +605,108 @@ describe("deleteSupplierMutationOptions", () => {
   });
 });
 
+describe("createUserMutationOptions", () => {
+  it("envía el input a createUser y devuelve el usuario", async () => {
+    const client = new QueryClient();
+    vi.mocked(createUser).mockResolvedValue(MANAGED_USER);
+    const options = createUserMutationOptions(client);
+    const input = {
+      email: MANAGED_USER.email,
+      password: "a".repeat(12),
+    };
+
+    await expect(options.mutationFn(input)).resolves.toEqual(MANAGED_USER);
+
+    expect(createUser).toHaveBeenCalledWith(input);
+  });
+
+  it("invalida la raíz de usuarios al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    createUserMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.all,
+    });
+  });
+});
+
+describe("deactivateUserMutationOptions", () => {
+  it("envía el id a deactivateUser y devuelve el usuario inactivo", async () => {
+    const client = new QueryClient();
+    const inactive = { ...MANAGED_USER, isActive: false };
+    vi.mocked(deactivateUser).mockResolvedValue(inactive);
+    const options = deactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).resolves.toEqual(
+      inactive,
+    );
+
+    expect(deactivateUser).toHaveBeenCalledWith(MANAGED_USER.id);
+  });
+
+  it("invalida la raíz de usuarios al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    deactivateUserMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error(
+      "No se puede desactivar al último administrador activo",
+    );
+    vi.mocked(deactivateUser).mockRejectedValue(apiError);
+    const options = deactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).rejects.toBe(apiError);
+  });
+});
+
+describe("reactivateUserMutationOptions", () => {
+  it("envía el id a reactivateUser y devuelve el usuario activo", async () => {
+    const client = new QueryClient();
+    const active = { ...MANAGED_USER, isActive: true };
+    vi.mocked(reactivateUser).mockResolvedValue(active);
+    const options = reactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).resolves.toEqual(active);
+
+    expect(reactivateUser).toHaveBeenCalledWith(MANAGED_USER.id);
+  });
+
+  it("invalida la raíz de usuarios al tener éxito", () => {
+    const client = new QueryClient();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    reactivateUserMutationOptions(client).onSuccess();
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.all,
+    });
+  });
+
+  it("propaga el error de la API sin tragarlo", async () => {
+    const client = new QueryClient();
+    const apiError = new Error(
+      "No puedes reactivar tu propia cuenta",
+    );
+    vi.mocked(reactivateUser).mockRejectedValue(apiError);
+    const options = reactivateUserMutationOptions(client);
+
+    await expect(options.mutationFn(MANAGED_USER.id)).rejects.toBe(apiError);
+  });
+});
+
 describe("createMovementMutationOptions", () => {
   const MOVEMENT_INPUT: CreateStockMovementInput = {
     productId: PRODUCT._id,
@@ -685,5 +854,146 @@ describe("invalidación de la consulta de detalle", () => {
     expect(
       client.getQueryState(queryKeys.movements.list)?.isInvalidated,
     ).toBe(false);
+  });
+});
+
+describe("authQueryOptions y mutaciones", () => {
+  describe("meQueryOptions", () => {
+    it("devuelve el queryKey correcto y opciones de staleTime", () => {
+      const options = meQueryOptions();
+      expect(options.queryKey).toEqual(queryKeys.auth.me);
+      expect(options.retry).toBe(false);
+      expect(options.staleTime).toBe(300000);
+    });
+
+    it("resuelve con el usuario autenticado cuando getMe es exitoso", async () => {
+      vi.mocked(getMe).mockResolvedValue(AUTH_USER);
+      const controller = new AbortController();
+
+      const options = meQueryOptions();
+      const result = await options.queryFn({ signal: controller.signal });
+
+      expect(result).toEqual(AUTH_USER);
+      expect(getMe).toHaveBeenCalledWith(controller.signal);
+    });
+
+    it("resuelve con null cuando getMe falla con 401 UNAUTHORIZED", async () => {
+      vi.mocked(getMe).mockRejectedValue(
+        new ApiError({
+          kind: "UNAUTHORIZED",
+          status: 401,
+          message: "No autenticado",
+        }),
+      );
+
+      const options = meQueryOptions();
+      const result = await options.queryFn({
+        signal: new AbortController().signal,
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it("propaga el error cuando getMe falla con error 500 INTERNAL", async () => {
+      const error = new ApiError({
+        kind: "INTERNAL",
+        status: 500,
+        message: "Error de servidor",
+      });
+      vi.mocked(getMe).mockRejectedValue(error);
+
+      const options = meQueryOptions();
+      await expect(
+        options.queryFn({ signal: new AbortController().signal }),
+      ).rejects.toThrow("Error de servidor");
+    });
+  });
+
+  describe("loginMutationOptions", () => {
+    it("llama a login y actualiza la query de auth.me en onSuccess", async () => {
+      const client = new QueryClient();
+      vi.mocked(login).mockResolvedValue(AUTH_USER);
+      const input: LoginInput = {
+        email: "admin@example.com",
+        password: "password123",
+      };
+
+      const options = loginMutationOptions(client);
+      const result = await options.mutationFn(input);
+      expect(result).toEqual(AUTH_USER);
+      expect(login).toHaveBeenCalledWith(input);
+
+      options.onSuccess(AUTH_USER);
+      expect(client.getQueryData(queryKeys.auth.me)).toEqual(AUTH_USER);
+    });
+  });
+
+  describe("logoutMutationOptions", () => {
+    it("llama a logout, cancela consultas en vuelo, purga datos privados y establece auth.me en null", async () => {
+      const client = new QueryClient();
+      vi.mocked(logout).mockResolvedValue(null);
+
+      // Precargar datos en caché
+      client.setQueryData(queryKeys.auth.me, AUTH_USER);
+      client.setQueryData(queryKeys.products.all, [PRODUCT]);
+      client.setQueryData(queryKeys.movements.all, [MOVEMENT]);
+      client.setQueryData(queryKeys.categories.all, [CATEGORY]);
+      client.setQueryData(queryKeys.suppliers.all, [SUPPLIER]);
+      client.setQueryData(queryKeys.users.all, [MANAGED_USER]);
+
+      const cancelSpy = vi.spyOn(client, "cancelQueries");
+      const removeSpy = vi.spyOn(client, "removeQueries");
+
+      const options = logoutMutationOptions(client);
+      const result = await options.mutationFn();
+      expect(result).toBeNull();
+      expect(logout).toHaveBeenCalled();
+
+      await options.onSuccess();
+
+      // Verifica cancelación de consultas pendientes de datos privados
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.products.all,
+      });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.movements.all,
+      });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.categories.all,
+      });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.suppliers.all,
+      });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.users.all,
+      });
+
+      // Verifica eliminación de datos privados
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.products.all,
+      });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.movements.all,
+      });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.categories.all,
+      });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.suppliers.all,
+      });
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.users.all,
+      });
+
+      // Verifica que no quede rastro de los datos privados en caché
+      expect(client.getQueryData(queryKeys.products.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.movements.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.categories.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.suppliers.all)).toBeUndefined();
+      expect(client.getQueryData(queryKeys.users.all)).toBeUndefined();
+
+      // Verifica que la sesión quede en null explícito
+      expect(client.getQueryData(queryKeys.auth.me)).toBeNull();
+    });
   });
 });

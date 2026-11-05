@@ -4,31 +4,47 @@ import type { CreateCategoryInput } from "@/schemas/category";
 import type { CreateProductInput } from "@/schemas/product";
 import type { CreateStockMovementInput } from "@/schemas/stockMovement";
 import type { CreateSupplierInput } from "@/schemas/supplier";
+import type { CreateUserInput } from "@/schemas/user";
+import type { LoginInput } from "@/schemas/auth";
 import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
-import type { StockMovementDTO } from "@/types/stockMovement";
+import type {
+  MovementProductDTO,
+  StockMovementDTO,
+  StockMovementWithProductDTO,
+} from "@/types/stockMovement";
 import type { SupplierDTO } from "@/types/supplier";
+import type { UserDTO } from "@/types/user";
 
 export type UpdateProductInput = Partial<CreateProductInput>;
 export type UpdateCategoryInput = Partial<CreateCategoryInput>;
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: "user" | "admin";
+}
+
 export class ApiError extends Error {
   readonly kind: AppErrorKind;
   readonly status: number;
   readonly issues?: FieldIssue[];
+  readonly path?: string;
 
   constructor(options: {
     kind: AppErrorKind;
     message: string;
     status: number;
     issues?: FieldIssue[];
+    path?: string;
   }) {
     super(options.message);
     this.name = "ApiError";
     this.kind = options.kind;
     this.status = options.status;
     this.issues = options.issues;
+    this.path = options.path;
   }
 }
 
@@ -37,6 +53,20 @@ const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/;
 const isoDate = z
   .string()
   .refine((value) => !Number.isNaN(Date.parse(value)));
+
+const authUserSchema: z.ZodType<AuthUser> = z.object({
+  id: z.string().regex(OBJECT_ID_PATTERN),
+  email: z.string().email(),
+  role: z.enum(["user", "admin"]),
+});
+
+const userSchema: z.ZodType<UserDTO> = z.object({
+  id: z.string().regex(OBJECT_ID_PATTERN),
+  email: z.string().email(),
+  role: z.enum(["user", "admin"]),
+  isActive: z.boolean(),
+  createdAt: isoDate,
+});
 
 const productSchema: z.ZodType<ProductDTO> = z.object({
   _id: z.string().regex(OBJECT_ID_PATTERN),
@@ -54,7 +84,7 @@ const productSchema: z.ZodType<ProductDTO> = z.object({
   __v: z.number().optional(),
 });
 
-const stockMovementSchema: z.ZodType<StockMovementDTO> = z.object({
+const stockMovementBaseSchema = z.object({
   _id: z.string().regex(OBJECT_ID_PATTERN),
   productId: z.string().regex(OBJECT_ID_PATTERN),
   type: z.enum(["IN", "OUT"]),
@@ -63,6 +93,21 @@ const stockMovementSchema: z.ZodType<StockMovementDTO> = z.object({
   createdAt: isoDate,
   __v: z.number().optional(),
 });
+
+const stockMovementSchema: z.ZodType<StockMovementDTO> =
+  stockMovementBaseSchema;
+
+const movementProductSchema: z.ZodType<MovementProductDTO> = z.object({
+  _id: z.string().regex(OBJECT_ID_PATTERN),
+  name: z.string().min(1),
+  sku: z.string().min(1),
+  deletedAt: isoDate.nullable(),
+});
+
+const stockMovementWithProductSchema: z.ZodType<StockMovementWithProductDTO> =
+  stockMovementBaseSchema.extend({
+    product: movementProductSchema.nullable(),
+  });
 
 const categorySchema: z.ZodType<CategoryDTO> = z.object({
   _id: z.string().regex(OBJECT_ID_PATTERN),
@@ -86,13 +131,21 @@ const supplierSchema: z.ZodType<SupplierDTO> = z.object({
 });
 
 const productListSchema = z.array(productSchema);
-const movementListSchema = z.array(stockMovementSchema);
+const movementListSchema = z.array(stockMovementWithProductSchema);
 const categoryListSchema = z.array(categorySchema);
 const supplierListSchema = z.array(supplierSchema);
+const userListSchema = z.array(userSchema);
 
 const errorEnvelopeSchema = z.object({
   error: z.object({
-    kind: z.enum(["VALIDATION", "CONFLICT", "NOT_FOUND", "INTERNAL"]),
+    kind: z.enum([
+      "VALIDATION",
+      "UNAUTHORIZED",
+      "FORBIDDEN",
+      "CONFLICT",
+      "NOT_FOUND",
+      "INTERNAL",
+    ]),
     message: z.string(),
     issues: z
       .array(z.object({ path: z.string(), message: z.string() }))
@@ -114,6 +167,7 @@ export async function fetchJson<T>(
       kind: "INTERNAL",
       status: 0,
       message: "No se pudo conectar con el servidor",
+      path,
     });
   }
 
@@ -129,13 +183,18 @@ export async function fetchJson<T>(
     const envelope = errorEnvelopeSchema.safeParse(errorBody);
 
     if (envelope.success) {
-      throw new ApiError({ ...envelope.data.error, status: response.status });
+      throw new ApiError({
+        ...envelope.data.error,
+        status: response.status,
+        path,
+      });
     }
 
     throw new ApiError({
       kind: "INTERNAL",
       status: response.status,
       message: "Error del servidor",
+      path,
     });
   }
 
@@ -148,6 +207,7 @@ export async function fetchJson<T>(
       kind: "INTERNAL",
       status: response.status,
       message: "Respuesta inesperada del servidor",
+      path,
     });
   }
 
@@ -158,10 +218,61 @@ export async function fetchJson<T>(
       kind: "INTERNAL",
       status: response.status,
       message: "Respuesta inesperada del servidor",
+      path,
     });
   }
 
   return envelope.data.data;
+}
+
+export async function login(input: LoginInput): Promise<AuthUser> {
+  return fetchJson("/api/auth/login", authUserSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function logout(): Promise<null> {
+  return fetchJson("/api/auth/logout", z.null(), {
+    method: "POST",
+  });
+}
+
+export async function getMe(signal?: AbortSignal): Promise<AuthUser> {
+  return fetchJson(
+    "/api/auth/me",
+    authUserSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export async function getUsers(signal?: AbortSignal): Promise<UserDTO[]> {
+  return fetchJson(
+    "/api/users",
+    userListSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export async function createUser(input: CreateUserInput): Promise<UserDTO> {
+  return fetchJson("/api/users", userSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deactivateUser(id: string): Promise<UserDTO> {
+  return fetchJson(`/api/users/${id}/deactivate`, userSchema, {
+    method: "POST",
+  });
+}
+
+export async function reactivateUser(id: string): Promise<UserDTO> {
+  return fetchJson(`/api/users/${id}/reactivate`, userSchema, {
+    method: "POST",
+  });
 }
 
 export async function getProducts(
@@ -187,7 +298,7 @@ export async function getProduct(
 
 export async function getMovements(
   signal?: AbortSignal,
-): Promise<StockMovementDTO[]> {
+): Promise<StockMovementWithProductDTO[]> {
   return fetchJson(
     "/api/stock",
     movementListSchema,
@@ -198,7 +309,7 @@ export async function getMovements(
 export async function getMovementsByProduct(
   productId: string,
   signal?: AbortSignal,
-): Promise<StockMovementDTO[]> {
+): Promise<StockMovementWithProductDTO[]> {
   return fetchJson(
     `/api/stock?productId=${encodeURIComponent(productId)}`,
     movementListSchema,

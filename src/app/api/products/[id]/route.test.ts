@@ -3,7 +3,17 @@ import { AppError } from "@/lib/errors";
 import type { Product } from "@/db/models/Product";
 import { DELETE, GET, PUT } from "@/app/api/products/[id]/route";
 import type { IdRouteContext } from "@/app/api/_lib/http";
+import {
+  AuthenticationRequiredError,
+  ForbiddenError,
+} from "@/lib/auth/auth-errors";
+import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
 import { deleteProduct, getProduct, updateProduct } from "@/lib/products";
+
+vi.mock("@/lib/auth/auth-guards", () => ({
+  requireUser: vi.fn(),
+  requireAdmin: vi.fn(),
+}));
 
 vi.mock("@/lib/products", () => ({
   listProducts: vi.fn(),
@@ -23,6 +33,21 @@ type ErrorEnvelope = {
 
 const ID = "64b000000000000000000040";
 const BASE_URL = `http://localhost/api/products/${ID}`;
+const USER = {
+  id: "507f1f77bcf86cd799439011",
+  email: "user@example.com",
+  role: "user" as const,
+};
+const ADMIN = {
+  id: "507f1f77bcf86cd799439012",
+  email: "admin@example.com",
+  role: "admin" as const,
+};
+
+function mockAllowedRoles(): void {
+  vi.mocked(requireUser).mockResolvedValue(USER);
+  vi.mocked(requireAdmin).mockResolvedValue(ADMIN);
+}
 
 function makeContext(): IdRouteContext {
   return { params: Promise.resolve({ id: ID }) };
@@ -39,6 +64,7 @@ function makeBodyRequest(body: string): Request {
 describe("GET /api/products/:id", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   it("devuelve 200 con el producto por await params", async () => {
@@ -48,11 +74,33 @@ describe("GET /api/products/:id", () => {
     const response = await GET(new Request(BASE_URL), makeContext());
 
     expect(response.status).toBe(200);
+    expect(requireUser).toHaveBeenCalledTimes(1);
     expect(getProduct).toHaveBeenCalledWith(ID);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: product });
+  });
+
+  it("permite el acceso a un administrador autenticado", async () => {
+    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(getProduct).mockResolvedValue({ _id: ID } as unknown as Product);
+
+    const response = await GET(new Request(BASE_URL), makeContext());
+
+    expect(response.status).toBe(200);
+    expect(getProduct).toHaveBeenCalledWith(ID);
+  });
+
+  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
+    vi.mocked(requireUser).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await GET(new Request(BASE_URL), makeContext());
+
+    expect(response.status).toBe(401);
+    expect(getProduct).not.toHaveBeenCalled();
   });
 
   it("devuelve 400 cuando el ID es inválido", async () => {
@@ -127,6 +175,7 @@ describe("GET /api/products/:id", () => {
 describe("PUT /api/products/:id", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   const payload = {
@@ -146,11 +195,40 @@ describe("PUT /api/products/:id", () => {
     const response = await PUT(makeBodyRequest(JSON.stringify(payload)), makeContext());
 
     expect(response.status).toBe(200);
+    expect(requireAdmin).toHaveBeenCalledTimes(1);
     expect(updateProduct).toHaveBeenCalledWith(ID, payload);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: product });
+  });
+
+  it("devuelve 401 sin autenticación antes de parsear el body", async () => {
+    const request = makeBodyRequest('{"name":');
+    const jsonSpy = vi.spyOn(request, "json");
+
+    vi.mocked(requireAdmin).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await PUT(request, makeContext());
+
+    expect(response.status).toBe(401);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(updateProduct).not.toHaveBeenCalled();
+  });
+
+  it("devuelve 403 a un usuario sin rol admin antes de parsear el body", async () => {
+    const request = makeBodyRequest(JSON.stringify(payload));
+    const jsonSpy = vi.spyOn(request, "json");
+
+    vi.mocked(requireAdmin).mockRejectedValue(new ForbiddenError());
+
+    const response = await PUT(request, makeContext());
+
+    expect(response.status).toBe(403);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(updateProduct).not.toHaveBeenCalled();
   });
 
   it("devuelve 400 cuando el JSON está malformado sin llamar a la lib", async () => {
@@ -301,6 +379,7 @@ describe("PUT /api/products/:id", () => {
 describe("DELETE /api/products/:id", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   it("elimina el producto y devuelve 200 con el registro", async () => {
@@ -310,6 +389,7 @@ describe("DELETE /api/products/:id", () => {
     const response = await DELETE(new Request(BASE_URL, { method: "DELETE" }), makeContext());
 
     expect(response.status).toBe(200);
+    expect(requireAdmin).toHaveBeenCalledTimes(1);
     expect(deleteProduct).toHaveBeenCalledWith(ID);
 
     const json = (await response.json()) as { data: unknown };
@@ -317,6 +397,32 @@ describe("DELETE /api/products/:id", () => {
     expect(json).toEqual({
       data: { ...deleted, deletedAt: expect.any(String) },
     });
+  });
+
+  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
+    vi.mocked(requireAdmin).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await DELETE(
+      new Request(BASE_URL, { method: "DELETE" }),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(401);
+    expect(deleteProduct).not.toHaveBeenCalled();
+  });
+
+  it("devuelve 403 a un usuario sin rol admin", async () => {
+    vi.mocked(requireAdmin).mockRejectedValue(new ForbiddenError());
+
+    const response = await DELETE(
+      new Request(BASE_URL, { method: "DELETE" }),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(403);
+    expect(deleteProduct).not.toHaveBeenCalled();
   });
 
   it("devuelve 400 cuando el ID es inválido", async () => {
@@ -355,6 +461,31 @@ describe("DELETE /api/products/:id", () => {
     expect(json.error).toEqual({
       kind: "NOT_FOUND",
       message: "El producto no existe",
+    });
+  });
+
+  it("devuelve 409 cuando el producto tiene stock disponible", async () => {
+    vi.mocked(deleteProduct).mockRejectedValue(
+      new AppError({
+        kind: "CONFLICT",
+        message:
+          "No se puede archivar un producto con stock disponible. Registrá una salida hasta dejarlo en 0 antes de archivarlo.",
+      }),
+    );
+
+    const response = await DELETE(
+      new Request(BASE_URL, { method: "DELETE" }),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(409);
+
+    const json = (await response.json()) as ErrorEnvelope;
+
+    expect(json.error).toEqual({
+      kind: "CONFLICT",
+      message:
+        "No se puede archivar un producto con stock disponible. Registrá una salida hasta dejarlo en 0 antes de archivarlo.",
     });
   });
 

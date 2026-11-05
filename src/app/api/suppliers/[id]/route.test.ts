@@ -3,7 +3,17 @@ import { AppError } from "@/lib/errors";
 import type { Supplier } from "@/db/models/Supplier";
 import { DELETE, GET, PUT } from "@/app/api/suppliers/[id]/route";
 import type { IdRouteContext } from "@/app/api/_lib/http";
+import {
+  AuthenticationRequiredError,
+  ForbiddenError,
+} from "@/lib/auth/auth-errors";
+import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
 import { deleteSupplier, getSupplier, updateSupplier } from "@/lib/suppliers";
+
+vi.mock("@/lib/auth/auth-guards", () => ({
+  requireUser: vi.fn(),
+  requireAdmin: vi.fn(),
+}));
 
 vi.mock("@/lib/suppliers", () => ({
   listSuppliers: vi.fn(),
@@ -23,6 +33,21 @@ type ErrorEnvelope = {
 
 const ID = "64b000000000000000000061";
 const BASE_URL = `http://localhost/api/suppliers/${ID}`;
+const USER = {
+  id: "507f1f77bcf86cd799439011",
+  email: "user@example.com",
+  role: "user" as const,
+};
+const ADMIN = {
+  id: "507f1f77bcf86cd799439012",
+  email: "admin@example.com",
+  role: "admin" as const,
+};
+
+function mockAllowedRoles(): void {
+  vi.mocked(requireUser).mockResolvedValue(USER);
+  vi.mocked(requireAdmin).mockResolvedValue(ADMIN);
+}
 
 function makeContext(): IdRouteContext {
   return { params: Promise.resolve({ id: ID }) };
@@ -39,6 +64,7 @@ function makeBodyRequest(body: string): Request {
 describe("GET /api/suppliers/:id", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   it("devuelve 200 con el proveedor por await params", async () => {
@@ -48,11 +74,36 @@ describe("GET /api/suppliers/:id", () => {
     const response = await GET(new Request(BASE_URL), makeContext());
 
     expect(response.status).toBe(200);
+    expect(requireUser).toHaveBeenCalledTimes(1);
     expect(getSupplier).toHaveBeenCalledWith(ID);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: supplier });
+  });
+
+  it("permite el acceso a un administrador autenticado", async () => {
+    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(getSupplier).mockResolvedValue({
+      _id: ID,
+      name: "Acme",
+    } as unknown as Supplier);
+
+    const response = await GET(new Request(BASE_URL), makeContext());
+
+    expect(response.status).toBe(200);
+    expect(getSupplier).toHaveBeenCalledWith(ID);
+  });
+
+  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
+    vi.mocked(requireUser).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await GET(new Request(BASE_URL), makeContext());
+
+    expect(response.status).toBe(401);
+    expect(getSupplier).not.toHaveBeenCalled();
   });
 
   it("devuelve 400 sin issues cuando el ID es inválido", async () => {
@@ -123,6 +174,7 @@ describe("GET /api/suppliers/:id", () => {
 describe("PUT /api/suppliers/:id", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   const payload = {
@@ -145,11 +197,40 @@ describe("PUT /api/suppliers/:id", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(requireAdmin).toHaveBeenCalledTimes(1);
     expect(updateSupplier).toHaveBeenCalledWith(ID, payload);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: supplier });
+  });
+
+  it("devuelve 401 sin autenticación antes de parsear el body", async () => {
+    const request = makeBodyRequest('{"name":');
+    const jsonSpy = vi.spyOn(request, "json");
+
+    vi.mocked(requireAdmin).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await PUT(request, makeContext());
+
+    expect(response.status).toBe(401);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(updateSupplier).not.toHaveBeenCalled();
+  });
+
+  it("devuelve 403 a un usuario sin rol admin antes de parsear el body", async () => {
+    const request = makeBodyRequest(JSON.stringify(payload));
+    const jsonSpy = vi.spyOn(request, "json");
+
+    vi.mocked(requireAdmin).mockRejectedValue(new ForbiddenError());
+
+    const response = await PUT(request, makeContext());
+
+    expect(response.status).toBe(403);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(updateSupplier).not.toHaveBeenCalled();
   });
 
   it("devuelve 400 cuando el JSON está malformado sin llamar a la lib", async () => {
@@ -311,6 +392,7 @@ describe("PUT /api/suppliers/:id", () => {
 describe("DELETE /api/suppliers/:id", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedRoles();
   });
 
   it("elimina el proveedor y devuelve 200 con el registro", async () => {
@@ -327,6 +409,7 @@ describe("DELETE /api/suppliers/:id", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(requireAdmin).toHaveBeenCalledTimes(1);
     expect(deleteSupplier).toHaveBeenCalledWith(ID);
 
     const json = (await response.json()) as { data: unknown };
@@ -334,6 +417,32 @@ describe("DELETE /api/suppliers/:id", () => {
     expect(json).toEqual({
       data: { ...deleted, deletedAt: expect.any(String) },
     });
+  });
+
+  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
+    vi.mocked(requireAdmin).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await DELETE(
+      new Request(BASE_URL, { method: "DELETE" }),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(401);
+    expect(deleteSupplier).not.toHaveBeenCalled();
+  });
+
+  it("devuelve 403 a un usuario sin rol admin", async () => {
+    vi.mocked(requireAdmin).mockRejectedValue(new ForbiddenError());
+
+    const response = await DELETE(
+      new Request(BASE_URL, { method: "DELETE" }),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(403);
+    expect(deleteSupplier).not.toHaveBeenCalled();
   });
 
   it("devuelve 400 sin issues cuando el ID es inválido", async () => {

@@ -1,8 +1,11 @@
 import { errorResponse, ok, parseJsonBody } from "@/app/api/_lib/http";
+import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
 import { createProduct, listProducts } from "@/lib/products";
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    await requireUser();
+
     const products = await listProducts();
 
     return ok(products);
@@ -13,6 +16,8 @@ export async function GET(request: Request): Promise<Response> {
 
 export async function POST(request: Request): Promise<Response> {
   try {
+    await requireAdmin();
+
     const body = await parseJsonBody(request);
 
     const product = await createProduct(body);

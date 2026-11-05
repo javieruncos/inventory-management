@@ -8,7 +8,6 @@ import { cn } from "@/lib/cn";
 type StockMovementsListProps = {
   movements: MovementWithProduct[];
   totalMovements: number;
-  productsStatus: "loading" | "error" | "ready";
 };
 
 const dateFormat = new Intl.DateTimeFormat("es", {
@@ -16,14 +15,6 @@ const dateFormat = new Intl.DateTimeFormat("es", {
   month: "short",
   year: "numeric",
 });
-
-function unavailableProductName(
-  productsStatus: StockMovementsListProps["productsStatus"],
-): string {
-  if (productsStatus === "loading") return "Cargando producto…";
-  if (productsStatus === "error") return "Nombre no disponible";
-  return "Producto no disponible";
-}
 
 function typeLabel(movement: MovementWithProduct): string {
   return movement.type === "IN" ? "Entrada" : "Salida";
@@ -64,7 +55,6 @@ function TypeMark({ movement }: { movement: MovementWithProduct }) {
 export function StockMovementsList({
   movements,
   totalMovements,
-  productsStatus,
 }: StockMovementsListProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -101,15 +91,21 @@ export function StockMovementsList({
               >
                 <td className="py-3 pl-0 pr-4 align-middle">
                   {movement.product ? (
-                    <Link
-                      href={`/products/${movement.productId}`}
-                      className="block truncate font-medium text-text hover:text-primary"
-                    >
-                      {movement.product.name}
-                    </Link>
+                    movement.product.deletedAt ? (
+                      <span className="block truncate font-medium text-text">
+                        {movement.product.name}
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/products/${movement.productId}`}
+                        className="block truncate font-medium text-text hover:text-primary"
+                      >
+                        {movement.product.name}
+                      </Link>
+                    )
                   ) : (
                     <span className="block truncate font-medium text-text">
-                      {unavailableProductName(productsStatus)}
+                      Producto no disponible
                     </span>
                   )}
                 </td>
@@ -169,14 +165,18 @@ export function StockMovementsList({
                   <div className="flex items-start justify-between gap-3">
                     <p className="truncate text-body font-medium text-text">
                       {movement.product ? (
-                        <Link
-                          href={`/products/${movement.productId}`}
-                          className="hover:text-primary"
-                        >
-                          {movement.product.name}
-                        </Link>
+                        movement.product.deletedAt ? (
+                          <span>{movement.product.name}</span>
+                        ) : (
+                          <Link
+                            href={`/products/${movement.productId}`}
+                            className="hover:text-primary"
+                          >
+                            {movement.product.name}
+                          </Link>
+                        )
                       ) : (
-                        unavailableProductName(productsStatus)
+                        "Producto no disponible"
                       )}
                     </p>
                     <TrendPill

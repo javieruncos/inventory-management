@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 import type { StockMovement } from "@/db/models/StockMovement";
+import type { StockMovementWithProductDTO } from "@/types/stockMovement";
 import { GET, POST } from "@/app/api/stock/route";
+import { AuthenticationRequiredError } from "@/lib/auth/auth-errors";
+import { requireUser } from "@/lib/auth/auth-guards";
 import { createMovement, listMovements } from "@/lib/stock";
+
+vi.mock("@/lib/auth/auth-guards", () => ({
+  requireUser: vi.fn(),
+}));
 
 vi.mock("@/lib/stock", () => ({
   listMovements: vi.fn(),
@@ -19,6 +26,20 @@ type ErrorEnvelope = {
 
 const ID = "64b000000000000000000062";
 const BASE_URL = "http://localhost/api/stock";
+const USER = {
+  id: "507f1f77bcf86cd799439011",
+  email: "user@example.com",
+  role: "user" as const,
+};
+const ADMIN = {
+  id: "507f1f77bcf86cd799439012",
+  email: "admin@example.com",
+  role: "admin" as const,
+};
+
+function mockAllowedUser(): void {
+  vi.mocked(requireUser).mockResolvedValue(USER);
+}
 
 function makeGetRequest(query: string): Request {
   return new Request(`${BASE_URL}${query}`);
@@ -35,10 +56,13 @@ function makePostRequest(body: string): Request {
 describe("GET /api/stock", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedUser();
   });
 
   const movements = [
-    { _id: "64b000000000000000000070" } as unknown as StockMovement,
+    {
+      _id: "64b000000000000000000070",
+    } as unknown as StockMovementWithProductDTO,
   ];
 
   it("devuelve 200 con todos los movimientos cuando no hay query param", async () => {
@@ -47,11 +71,33 @@ describe("GET /api/stock", () => {
     const response = await GET(new Request(BASE_URL));
 
     expect(response.status).toBe(200);
+    expect(requireUser).toHaveBeenCalledTimes(1);
     expect(listMovements).toHaveBeenCalledWith(undefined);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: movements });
+  });
+
+  it("permite el acceso a un administrador autenticado", async () => {
+    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(listMovements).mockResolvedValue(movements);
+
+    const response = await GET(new Request(BASE_URL));
+
+    expect(response.status).toBe(200);
+    expect(listMovements).toHaveBeenCalledWith(undefined);
+  });
+
+  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
+    vi.mocked(requireUser).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await GET(new Request(BASE_URL));
+
+    expect(response.status).toBe(401);
+    expect(listMovements).not.toHaveBeenCalled();
   });
 
   it("devuelve 200 filtrando cuando ?productId es válido", async () => {
@@ -149,6 +195,7 @@ describe("GET /api/stock", () => {
 describe("POST /api/stock", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockAllowedUser();
   });
 
   const inPayload = {
@@ -179,11 +226,37 @@ describe("POST /api/stock", () => {
     const response = await POST(makePostRequest(JSON.stringify(inPayload)));
 
     expect(response.status).toBe(201);
+    expect(requireUser).toHaveBeenCalledTimes(1);
     expect(createMovement).toHaveBeenCalledWith(inPayload);
 
     const json = (await response.json()) as { data: unknown };
 
     expect(json).toEqual({ data: movement });
+  });
+
+  it("permite registrar un movimiento a un administrador autenticado", async () => {
+    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(createMovement).mockResolvedValue(movement);
+
+    const response = await POST(makePostRequest(JSON.stringify(inPayload)));
+
+    expect(response.status).toBe(201);
+    expect(createMovement).toHaveBeenCalledWith(inPayload);
+  });
+
+  it("devuelve 401 sin autenticación antes de parsear el body", async () => {
+    const request = makePostRequest('{"productId":');
+    const jsonSpy = vi.spyOn(request, "json");
+
+    vi.mocked(requireUser).mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(401);
+    expect(jsonSpy).not.toHaveBeenCalled();
+    expect(createMovement).not.toHaveBeenCalled();
   });
 
   it("registra una salida OUT y devuelve 201 con el body exacto", async () => {
