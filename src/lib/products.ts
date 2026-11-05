@@ -173,12 +173,22 @@ export async function deleteProduct(id: string): Promise<Product> {
     await connectDB();
 
     const product = await ProductModel.findOneAndUpdate(
-      { _id: id, deletedAt: null },
+      { _id: id, deletedAt: null, currentStock: 0 },
       { deletedAt: new Date() },
       { new: true },
     );
 
     if (!product) {
+      const active = await ProductModel.exists({ _id: id, deletedAt: null });
+
+      if (active) {
+        throw new AppError({
+          kind: "CONFLICT",
+          message:
+            "No se puede archivar un producto con stock disponible. Registrá una salida hasta dejarlo en 0 antes de archivarlo.",
+        });
+      }
+
       throw new AppError({
         kind: "NOT_FOUND",
         message: "El producto no existe",

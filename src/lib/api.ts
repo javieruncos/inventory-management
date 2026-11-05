@@ -8,7 +8,11 @@ import type { CreateUserInput } from "@/schemas/user";
 import type { LoginInput } from "@/schemas/auth";
 import type { CategoryDTO } from "@/types/category";
 import type { ProductDTO } from "@/types/product";
-import type { StockMovementDTO } from "@/types/stockMovement";
+import type {
+  MovementProductDTO,
+  StockMovementDTO,
+  StockMovementWithProductDTO,
+} from "@/types/stockMovement";
 import type { SupplierDTO } from "@/types/supplier";
 import type { UserDTO } from "@/types/user";
 
@@ -80,7 +84,7 @@ const productSchema: z.ZodType<ProductDTO> = z.object({
   __v: z.number().optional(),
 });
 
-const stockMovementSchema: z.ZodType<StockMovementDTO> = z.object({
+const stockMovementBaseSchema = z.object({
   _id: z.string().regex(OBJECT_ID_PATTERN),
   productId: z.string().regex(OBJECT_ID_PATTERN),
   type: z.enum(["IN", "OUT"]),
@@ -89,6 +93,21 @@ const stockMovementSchema: z.ZodType<StockMovementDTO> = z.object({
   createdAt: isoDate,
   __v: z.number().optional(),
 });
+
+const stockMovementSchema: z.ZodType<StockMovementDTO> =
+  stockMovementBaseSchema;
+
+const movementProductSchema: z.ZodType<MovementProductDTO> = z.object({
+  _id: z.string().regex(OBJECT_ID_PATTERN),
+  name: z.string().min(1),
+  sku: z.string().min(1),
+  deletedAt: isoDate.nullable(),
+});
+
+const stockMovementWithProductSchema: z.ZodType<StockMovementWithProductDTO> =
+  stockMovementBaseSchema.extend({
+    product: movementProductSchema.nullable(),
+  });
 
 const categorySchema: z.ZodType<CategoryDTO> = z.object({
   _id: z.string().regex(OBJECT_ID_PATTERN),
@@ -112,7 +131,7 @@ const supplierSchema: z.ZodType<SupplierDTO> = z.object({
 });
 
 const productListSchema = z.array(productSchema);
-const movementListSchema = z.array(stockMovementSchema);
+const movementListSchema = z.array(stockMovementWithProductSchema);
 const categoryListSchema = z.array(categorySchema);
 const supplierListSchema = z.array(supplierSchema);
 const userListSchema = z.array(userSchema);
@@ -279,7 +298,7 @@ export async function getProduct(
 
 export async function getMovements(
   signal?: AbortSignal,
-): Promise<StockMovementDTO[]> {
+): Promise<StockMovementWithProductDTO[]> {
   return fetchJson(
     "/api/stock",
     movementListSchema,
@@ -290,7 +309,7 @@ export async function getMovements(
 export async function getMovementsByProduct(
   productId: string,
   signal?: AbortSignal,
-): Promise<StockMovementDTO[]> {
+): Promise<StockMovementWithProductDTO[]> {
   return fetchJson(
     `/api/stock?productId=${encodeURIComponent(productId)}`,
     movementListSchema,

@@ -1137,10 +1137,24 @@ describe("createMovement", () => {
 });
 
 describe("listMovements", () => {
-  it("lista todos los movimientos ordenados por createdAt descendente", async () => {
-    const docs = [
-      { _id: "64b000000000000000000022" } as unknown as StockMovement,
-    ];
+  const PRODUCT_ID = "64b000000000000000000022";
+  const OTHER_PRODUCT_ID = "64b000000000000000000023";
+
+  function makeMovement(
+    overrides: Partial<StockMovement> = {},
+  ): StockMovement {
+    return {
+      _id: new Types.ObjectId("64b000000000000000000022"),
+      productId: new Types.ObjectId(PRODUCT_ID),
+      type: "IN",
+      quantity: 5,
+      reason: "Compra inicial",
+      createdAt: new Date("2026-01-01T10:00:00.000Z"),
+      ...overrides,
+    } as StockMovement;
+  }
+
+  function mockMovementFind(docs: StockMovement[]) {
     const sortSpy = vi.fn().mockResolvedValue(docs);
     const findSpy = vi.spyOn(
       StockMovementModel,
@@ -1151,40 +1165,174 @@ describe("listMovements", () => {
       }
     >;
     findSpy.mockReturnValue({ sort: sortSpy });
+
+    return { findSpy, sortSpy };
+  }
+
+  function mockProductFind(products: Partial<Product>[]) {
+    const leanSpy = vi.fn().mockResolvedValue(products);
+    const selectSpy = vi.fn().mockReturnValue({ lean: leanSpy });
+    const findSpy = vi.spyOn(
+      ProductModel,
+      "find",
+    ) as unknown as MockInstance<
+      (filter?: unknown) => {
+        select: (projection?: unknown) => {
+          lean: () => Promise<Partial<Product>[]>;
+        };
+      }
+    >;
+    findSpy.mockReturnValue({ select: selectSpy });
+
+    return { findSpy, selectSpy, leanSpy };
+  }
+
+  it("incluye el nombre de un producto activo", async () => {
+    const movement = makeMovement();
+    const { findSpy, sortSpy } = mockMovementFind([movement]);
+    const { findSpy: productFindSpy, selectSpy } = mockProductFind([
+      {
+        _id: new Types.ObjectId(PRODUCT_ID),
+        name: "Teclado Mecánico",
+        sku: "KB-001",
+        deletedAt: null,
+      },
+    ]);
 
     const result = await listMovements();
 
-    expect(result).toBe(docs);
+    expect(result).toEqual([
+      {
+        _id: "64b000000000000000000022",
+        productId: PRODUCT_ID,
+        type: "IN",
+        quantity: 5,
+        reason: "Compra inicial",
+        createdAt: "2026-01-01T10:00:00.000Z",
+        product: {
+          _id: PRODUCT_ID,
+          name: "Teclado Mecánico",
+          sku: "KB-001",
+          deletedAt: null,
+        },
+      },
+    ]);
     expect(findSpy).toHaveBeenCalledWith({});
     expect(sortSpy).toHaveBeenCalledWith({ createdAt: -1 });
+    expect(productFindSpy).toHaveBeenCalledWith({
+      _id: { $in: [PRODUCT_ID] },
+    });
+    expect(selectSpy).toHaveBeenCalledWith("_id name sku deletedAt");
 
     findSpy.mockRestore();
+    productFindSpy.mockRestore();
+  });
+
+  it("incluye el nombre de un producto archivado", async () => {
+    const movement = makeMovement({
+      productId: new Types.ObjectId(OTHER_PRODUCT_ID),
+    });
+    const { findSpy } = mockMovementFind([movement]);
+    const { findSpy: productFindSpy } = mockProductFind([
+      {
+        _id: new Types.ObjectId(OTHER_PRODUCT_ID),
+        name: "Mouse Archivado",
+        sku: "MS-002",
+        deletedAt: new Date("2026-02-01T10:00:00.000Z"),
+      },
+    ]);
+
+    const result = await listMovements();
+
+    expect(result[0].product).toEqual({
+      _id: OTHER_PRODUCT_ID,
+      name: "Mouse Archivado",
+      sku: "MS-002",
+      deletedAt: "2026-02-01T10:00:00.000Z",
+    });
+    expect(productFindSpy).toHaveBeenCalledWith({
+      _id: { $in: [OTHER_PRODUCT_ID] },
+    });
+
+    findSpy.mockRestore();
+    productFindSpy.mockRestore();
+  });
+
+  it("usa el fallback cuando el producto no existe", async () => {
+    const movement = makeMovement();
+    const { findSpy } = mockMovementFind([movement]);
+    const { findSpy: productFindSpy } = mockProductFind([]);
+
+    const result = await listMovements();
+
+    expect(result[0].product).toBeNull();
+
+    findSpy.mockRestore();
+    productFindSpy.mockRestore();
+  });
+
+  it("consulta los productos en un solo batch con IDs únicos", async () => {
+    const first = makeMovement();
+    const second = makeMovement({
+      _id: new Types.ObjectId("64b000000000000000000024"),
+      productId: new Types.ObjectId(OTHER_PRODUCT_ID),
+    });
+    const third = makeMovement({
+      _id: new Types.ObjectId("64b000000000000000000025"),
+      productId: new Types.ObjectId(PRODUCT_ID),
+    });
+    const { findSpy } = mockMovementFind([first, second, third]);
+    const { findSpy: productFindSpy, leanSpy } = mockProductFind([]);
+
+    const result = await listMovements();
+
+    expect(result).toHaveLength(3);
+    expect(productFindSpy).toHaveBeenCalledTimes(1);
+    expect(productFindSpy).toHaveBeenCalledWith({
+      _id: { $in: [PRODUCT_ID, OTHER_PRODUCT_ID] },
+    });
+    expect(leanSpy).toHaveBeenCalledTimes(1);
+
+    findSpy.mockRestore();
+    productFindSpy.mockRestore();
+  });
+
+  it("conserva el orden entregado por la consulta", async () => {
+    const newest = makeMovement({
+      _id: new Types.ObjectId("64b000000000000000000026"),
+      createdAt: new Date("2026-03-01T10:00:00.000Z"),
+    });
+    const oldest = makeMovement({
+      _id: new Types.ObjectId("64b000000000000000000027"),
+      createdAt: new Date("2026-01-01T10:00:00.000Z"),
+    });
+    const { findSpy } = mockMovementFind([newest, oldest]);
+    const { findSpy: productFindSpy } = mockProductFind([]);
+
+    const result = await listMovements();
+
+    expect(result.map((movement) => movement._id)).toEqual([
+      "64b000000000000000000026",
+      "64b000000000000000000027",
+    ]);
+
+    findSpy.mockRestore();
+    productFindSpy.mockRestore();
   });
 
   it("filtra los movimientos por productId", async () => {
-    const docs = [
-      { _id: "64b000000000000000000023" } as unknown as StockMovement,
-    ];
-    const sortSpy = vi.fn().mockResolvedValue(docs);
-    const findSpy = vi.spyOn(
-      StockMovementModel,
-      "find",
-    ) as unknown as MockInstance<
-      (filter?: unknown) => {
-        sort: (order?: unknown) => Promise<StockMovement[]>;
-      }
-    >;
-    findSpy.mockReturnValue({ sort: sortSpy });
+    const movement = makeMovement();
+    const { findSpy, sortSpy } = mockMovementFind([movement]);
+    const { findSpy: productFindSpy } = mockProductFind([]);
 
-    const result = await listMovements("507f1f77bcf86cd799439011");
+    const result = await listMovements(PRODUCT_ID);
 
-    expect(result).toBe(docs);
-    expect(findSpy).toHaveBeenCalledWith({
-      productId: "507f1f77bcf86cd799439011",
-    });
+    expect(result).toHaveLength(1);
+    expect(findSpy).toHaveBeenCalledWith({ productId: PRODUCT_ID });
     expect(sortSpy).toHaveBeenCalledWith({ createdAt: -1 });
 
     findSpy.mockRestore();
+    productFindSpy.mockRestore();
   });
 
   it("rechaza un productId que no es string", async () => {
@@ -1255,5 +1403,41 @@ describe("listMovements", () => {
     expect(result.message).toBe("Error interno del servidor");
 
     findSpy.mockRestore();
+  });
+
+  it("propaga INTERNAL cuando falla la consulta de productos", async () => {
+    const movement = makeMovement();
+    const { findSpy } = mockMovementFind([movement]);
+    const leanSpy = vi.fn().mockRejectedValue(new Error("products down"));
+    const selectSpy = vi.fn().mockReturnValue({ lean: leanSpy });
+    const productFindSpy = vi.spyOn(
+      ProductModel,
+      "find",
+    ) as unknown as MockInstance<
+      (filter?: unknown) => {
+        select: (projection?: unknown) => {
+          lean: () => Promise<Partial<Product>[]>;
+        };
+      }
+    >;
+    productFindSpy.mockReturnValue({ select: selectSpy });
+
+    let thrown: unknown;
+
+    try {
+      await listMovements();
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AppError);
+
+    const result = thrown as AppError;
+
+    expect(result.kind).toBe("INTERNAL");
+    expect(result.message).toBe("Error interno del servidor");
+
+    findSpy.mockRestore();
+    productFindSpy.mockRestore();
   });
 });

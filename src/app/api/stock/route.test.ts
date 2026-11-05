@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 import type { StockMovement } from "@/db/models/StockMovement";
+import type { StockMovementWithProductDTO } from "@/types/stockMovement";
 import { GET, POST } from "@/app/api/stock/route";
 import { AuthenticationRequiredError } from "@/lib/auth/auth-errors";
 import { requireUser } from "@/lib/auth/auth-guards";
@@ -59,7 +60,9 @@ describe("GET /api/stock", () => {
   });
 
   const movements = [
-    { _id: "64b000000000000000000070" } as unknown as StockMovement,
+    {
+      _id: "64b000000000000000000070",
+    } as unknown as StockMovementWithProductDTO,
   ];
 
   it("devuelve 200 con todos los movimientos cuando no hay query param", async () => {

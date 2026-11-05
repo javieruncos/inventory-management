@@ -52,6 +52,16 @@ const MOVEMENT = {
   createdAt: "2026-01-01T10:00:00.000Z",
 };
 
+const MOVEMENT_WITH_PRODUCT = {
+  ...MOVEMENT,
+  product: {
+    _id: "507f1f77bcf86cd799439011",
+    name: "Teclado Mecánico",
+    sku: "KB-001",
+    deletedAt: null,
+  },
+};
+
 const CATEGORY = {
   _id: "507f1f77bcf86cd799439021",
   name: "Tecnología",
@@ -468,12 +478,21 @@ describe("getProducts", () => {
 
 describe("getMovements", () => {
   it("solicita /api/stock y devuelve los movimientos validados", async () => {
-    fetchMock.mockResolvedValue(Response.json({ data: [MOVEMENT] }));
+    fetchMock.mockResolvedValue(
+      Response.json({ data: [MOVEMENT_WITH_PRODUCT] }),
+    );
 
     const result = await getMovements();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/stock", undefined);
-    expect(result).toEqual([MOVEMENT]);
+    expect(result).toEqual([MOVEMENT_WITH_PRODUCT]);
+  });
+
+  it("acepta product null cuando el producto no se resuelve", async () => {
+    const unresolved = { ...MOVEMENT, product: null };
+    fetchMock.mockResolvedValue(Response.json({ data: [unresolved] }));
+
+    await expect(getMovements()).resolves.toEqual([unresolved]);
   });
 
   it("pasa el AbortSignal a fetch para cancelación", async () => {
@@ -736,7 +755,9 @@ describe("getProduct", () => {
 
 describe("getMovementsByProduct", () => {
   it("solicita /api/stock con ?productId y devuelve la lista validada", async () => {
-    fetchMock.mockResolvedValue(Response.json({ data: [MOVEMENT] }));
+    fetchMock.mockResolvedValue(
+      Response.json({ data: [MOVEMENT_WITH_PRODUCT] }),
+    );
 
     const result = await getMovementsByProduct(MOVEMENT.productId);
 
@@ -744,7 +765,7 @@ describe("getMovementsByProduct", () => {
       `/api/stock?productId=${MOVEMENT.productId}`,
       undefined,
     );
-    expect(result).toEqual([MOVEMENT]);
+    expect(result).toEqual([MOVEMENT_WITH_PRODUCT]);
   });
 
   it("pasa el AbortSignal a fetch para cancelación", async () => {

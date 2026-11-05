@@ -3,8 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react";
-import type { ProductDTO } from "@/types/product";
-import type { StockMovementDTO } from "@/types/stockMovement";
+import type { StockMovementWithProductDTO } from "@/types/stockMovement";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -20,34 +19,12 @@ import {
 
 type RecentMovementsCardProps = {
   status: "loading" | "error" | "ready";
-  movements: StockMovementDTO[] | null;
-  products: ProductDTO[] | null;
-  productsStatus: "loading" | "error" | "ready";
+  movements: StockMovementWithProductDTO[] | null;
   totalMovements: number;
   errorMessage?: string;
   onRetry: () => void;
   className?: string;
 };
-
-type ProductNamesNoticeProps = {
-  status: "loading" | "error";
-};
-
-function ProductNamesNotice({ status }: ProductNamesNoticeProps) {
-  if (status === "loading") {
-    return (
-      <p role="status" className="mb-3 text-caption text-text-secondary">
-        Cargando nombres de productos…
-      </p>
-    );
-  }
-
-  return (
-    <p className="mb-3 text-caption text-text-secondary">
-      Los nombres de productos no están disponibles.
-    </p>
-  );
-}
 
 const FILTERS: ReadonlyArray<{ value: MovementFilter; label: string }> = [
   { value: "ALL", label: "Todos" },
@@ -66,8 +43,6 @@ const dateFormat = new Intl.DateTimeFormat("es", {
 export function RecentMovementsCard({
   status,
   movements,
-  products,
-  productsStatus,
   totalMovements,
   errorMessage,
   onRetry,
@@ -75,7 +50,7 @@ export function RecentMovementsCard({
 }: RecentMovementsCardProps) {
   const [filter, setFilter] = useState<MovementFilter>("ALL");
   const filtered = filterMovements(movements ?? [], filter);
-  const recent = getRecentMovements(filtered, products ?? [], {
+  const recent = getRecentMovements(filtered, {
     limit: DEFAULT_RECENT_MOVEMENTS_LIMIT,
   });
   const hasMoreMovements = filtered.length > recent.length;
@@ -107,19 +82,11 @@ export function RecentMovementsCard({
     } else {
       body = (
         <>
-          {productsStatus !== "ready" ? (
-            <ProductNamesNotice status={productsStatus} />
-          ) : null}
           <ul className="divide-y divide-divider">
             {recent.map((movement) => {
               const isIn = movement.type === "IN";
               const productName =
-                movement.product?.name ??
-                (productsStatus === "loading"
-                  ? "Cargando…"
-                  : productsStatus === "error"
-                    ? "Nombre no disponible"
-                    : "Producto no disponible");
+                movement.product?.name ?? "Producto no disponible";
 
               return (
                 <li key={movement._id} className="flex items-center gap-3 py-3">
@@ -135,7 +102,7 @@ export function RecentMovementsCard({
                     {isIn ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    {movement.product ? (
+                    {movement.product && !movement.product.deletedAt ? (
                       <Link
                         href={`/products/${movement.productId}`}
                         className="truncate text-body font-medium text-text hover:text-primary"
@@ -188,12 +155,7 @@ export function RecentMovementsCard({
 
   return (
     <Card
-      aria-busy={
-        status === "loading" ||
-        (status === "ready" &&
-          productsStatus === "loading" &&
-          recent.length > 0)
-      }
+      aria-busy={status === "loading"}
       className={cn("min-w-0", className)}
     >
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

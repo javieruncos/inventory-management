@@ -399,7 +399,7 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
   const handleDelete = async () => {
     const result = await confirmDelete({
       title: "Eliminar producto",
-      text: `Se quitará "${product.name}" (SKU: ${product.sku}) del listado y del inventario. El registro se conservará archivado; no se elimina de forma permanente.`,
+      text: `Solo se puede archivar cuando el stock actual es 0. Se quitará "${product.name}" (SKU: ${product.sku}) del listado; el registro y sus movimientos históricos se conservarán archivados.`,
       confirmText: "Eliminar",
       cancelText: "Cancelar",
       onConfirm: async () => {

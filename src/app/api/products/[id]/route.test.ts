@@ -464,6 +464,31 @@ describe("DELETE /api/products/:id", () => {
     });
   });
 
+  it("devuelve 409 cuando el producto tiene stock disponible", async () => {
+    vi.mocked(deleteProduct).mockRejectedValue(
+      new AppError({
+        kind: "CONFLICT",
+        message:
+          "No se puede archivar un producto con stock disponible. Registrá una salida hasta dejarlo en 0 antes de archivarlo.",
+      }),
+    );
+
+    const response = await DELETE(
+      new Request(BASE_URL, { method: "DELETE" }),
+      makeContext(),
+    );
+
+    expect(response.status).toBe(409);
+
+    const json = (await response.json()) as ErrorEnvelope;
+
+    expect(json.error).toEqual({
+      kind: "CONFLICT",
+      message:
+        "No se puede archivar un producto con stock disponible. Registrá una salida hasta dejarlo en 0 antes de archivarlo.",
+    });
+  });
+
   it("devuelve 500 con error genérico en INTERNAL", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
       return undefined;
