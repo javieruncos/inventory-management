@@ -145,6 +145,26 @@
   }
 }
 
+.login-theme {
+  color-scheme: dark;
+  --login-bg: #0f131c;
+  --login-surface: #111827;
+  --login-surface-raised: #161f30;
+  --login-border: #1e293b;
+  --login-border-strong: #334155;
+  --login-text: #dfe2ee;
+  --login-text-strong: #f8fafc;
+  --login-text-muted: #94a3b8;
+  --login-text-subtle: #64748b;
+  --login-primary: #10b981;
+  --login-primary-hover: #34d399;
+  --login-on-primary: #052e16;
+  --login-focus: #3b82f6;
+  --login-error: #f87171;
+  --login-error-bg: rgb(239 68 68 / 0.1);
+  --login-error-border: rgb(239 68 68 / 0.35);
+}
+
 /* Motion reducido (DESIGN.md §19): sin animaciones ni transiciones decorativas */
 @media (prefers-reduced-motion: reduce) {
   *,

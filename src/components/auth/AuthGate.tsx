@@ -5,17 +5,54 @@ import { useRouter } from "next/navigation";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/cn";
 import { getSessionGateState } from "@/lib/auth/sessionGate";
 import { useMe } from "@/lib/queries";
+
+type FallbackTone = "default" | "dark";
 
 type AuthGateProps = {
   children: ReactNode;
 };
 
-function SessionLoadingFallback() {
+type GuestOnlyProps = AuthGateProps & {
+  fallbackTone?: FallbackTone;
+};
+
+type FallbackSurfaceProps = {
+  tone: FallbackTone;
+  className?: string;
+  children: ReactNode;
+};
+
+function FallbackSurface({ tone, className, children }: FallbackSurfaceProps) {
+  if (tone === "dark") {
+    return (
+      <div
+        className={cn(
+          "w-full rounded-lg border border-[var(--login-border)] bg-[var(--login-surface)] p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.45)]",
+          className,
+        )}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return <Card className={cn("w-full", className)}>{children}</Card>;
+}
+
+function SessionLoadingFallback({ tone }: { tone: FallbackTone }) {
   return (
-    <div className="grid min-h-dvh place-items-center bg-canvas px-4 py-8">
-      <Card className="w-full max-w-[420px]">
+    <div
+      className={cn(
+        "grid min-h-dvh place-items-center px-4 py-8",
+        tone === "dark"
+          ? "login-theme bg-[var(--login-bg)]"
+          : "bg-canvas",
+      )}
+    >
+      <FallbackSurface tone={tone} className="max-w-[420px]">
         <div
           role="status"
           aria-busy="true"
@@ -23,43 +60,86 @@ function SessionLoadingFallback() {
         >
           <Loader2
             aria-hidden="true"
-            className="size-4 animate-spin text-primary motion-reduce:animate-none"
+            className={cn(
+              "size-4 animate-spin motion-reduce:animate-none",
+              tone === "dark"
+                ? "text-[var(--login-primary)]"
+                : "text-primary",
+            )}
           />
-          <span className="text-body text-text-secondary">
+          <span
+            className={
+              tone === "dark"
+                ? "text-body text-[var(--login-text-muted)]"
+                : "text-body text-text-secondary"
+            }
+          >
             Verificando sesión…
           </span>
         </div>
-      </Card>
+      </FallbackSurface>
     </div>
   );
 }
 
-function SessionErrorFallback({ onRetry }: { onRetry: () => void }) {
+function SessionErrorFallback({
+  onRetry,
+  tone,
+}: {
+  onRetry: () => void;
+  tone: FallbackTone;
+}) {
   return (
-    <div className="grid min-h-dvh place-items-center bg-canvas px-4 py-8">
-      <Card className="w-full max-w-[460px]">
+    <div
+      className={cn(
+        "grid min-h-dvh place-items-center px-4 py-8",
+        tone === "dark"
+          ? "login-theme bg-[var(--login-bg)]"
+          : "bg-canvas",
+      )}
+    >
+      <FallbackSurface tone={tone} className="max-w-[460px]">
         <div role="alert" className="flex items-start gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-control bg-status-out-bg text-status-out-text">
+          <span
+            className={cn(
+              "grid size-9 shrink-0 place-items-center",
+              tone === "dark"
+                ? "rounded bg-[var(--login-error-bg)] text-[var(--login-error)]"
+                : "rounded-control bg-status-out-bg text-status-out-text",
+            )}
+          >
             <TriangleAlert aria-hidden="true" className="size-4" />
           </span>
           <div className="min-w-0">
-            <h1 className="text-heading-sm text-text">
+            <h1
+              className={
+                tone === "dark"
+                  ? "text-heading-sm text-[var(--login-text-strong)]"
+                  : "text-heading-sm text-text"
+              }
+            >
               No pudimos verificar tu sesión
             </h1>
-            <p className="mt-1 text-body text-text-secondary">
+            <p
+              className={
+                tone === "dark"
+                  ? "mt-1 text-body text-[var(--login-text-muted)]"
+                  : "mt-1 text-body text-text-secondary"
+              }
+            >
               Hubo un problema de conexión con el servidor. Tu sesión no se
               modificó.
             </p>
           </div>
         </div>
         <Button
-          variant="secondary"
+          variant={tone === "dark" ? "accent" : "secondary"}
           className="mt-5 w-full"
           onClick={onRetry}
         >
           Reintentar
         </Button>
-      </Card>
+      </FallbackSurface>
     </div>
   );
 }
@@ -80,13 +160,21 @@ export function RequireAuth({ children }: AuthGateProps) {
   }
 
   if (state === "error") {
-    return <SessionErrorFallback onRetry={() => void session.refetch()} />;
+    return (
+      <SessionErrorFallback
+        onRetry={() => void session.refetch()}
+        tone="default"
+      />
+    );
   }
 
-  return <SessionLoadingFallback />;
+  return <SessionLoadingFallback tone="default" />;
 }
 
-export function GuestOnly({ children }: AuthGateProps) {
+export function GuestOnly({
+  children,
+  fallbackTone = "default",
+}: GuestOnlyProps) {
   const router = useRouter();
   const session = useMe();
   const state = getSessionGateState(session);
@@ -102,8 +190,13 @@ export function GuestOnly({ children }: AuthGateProps) {
   }
 
   if (state === "error") {
-    return <SessionErrorFallback onRetry={() => void session.refetch()} />;
+    return (
+      <SessionErrorFallback
+        onRetry={() => void session.refetch()}
+        tone={fallbackTone}
+      />
+    );
   }
 
-  return <SessionLoadingFallback />;
+  return <SessionLoadingFallback tone={fallbackTone} />;
 }
