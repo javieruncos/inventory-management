@@ -146,22 +146,22 @@
 }
 
 .login-theme {
-  color-scheme: dark;
-  --login-bg: #0f131c;
-  --login-surface: #111827;
-  --login-surface-raised: #161f30;
-  --login-border: #1e293b;
-  --login-border-strong: #334155;
-  --login-text: #dfe2ee;
-  --login-text-strong: #f8fafc;
-  --login-text-muted: #94a3b8;
-  --login-text-subtle: #64748b;
-  --login-primary: #10b981;
-  --login-primary-hover: #34d399;
-  --login-on-primary: #052e16;
-  --login-focus: #3b82f6;
-  --login-error: #f87171;
-  --login-error-bg: rgb(239 68 68 / 0.1);
+  color-scheme: light;
+  --login-bg: #f6f8fc;
+  --login-surface: #ffffff;
+  --login-surface-raised: #f8fafc;
+  --login-border: #eef1f6;
+  --login-border-strong: #e2e8f0;
+  --login-text: #334155;
+  --login-text-strong: #0b1c30;
+  --login-text-muted: #5e6f87;
+  --login-text-subtle: #5e6f87;
+  --login-primary: #5b5fc7;
+  --login-primary-hover: #4f46e5;
+  --login-on-primary: #ffffff;
+  --login-focus: #5b5fc7;
+  --login-error: #b91c1c;
+  --login-error-bg: #fef2f2;
   --login-error-border: rgb(239 68 68 / 0.35);
 }
 

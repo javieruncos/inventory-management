@@ -78,7 +78,7 @@ export function FormField({
                   "transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--login-focus)]",
                   error
                     ? "border-[var(--login-error)]"
-                    : "border-[var(--login-border)]",
+                    : "border-[var(--login-border-strong)]",
                   leadingIcon ? "pl-10" : "pl-3",
                   trailingAction ? "pr-12" : "pr-3",
                 )

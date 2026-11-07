@@ -35,7 +35,7 @@ export function LoginBrandPanel() {
   return (
     <aside
       aria-label="Información del sistema"
-      className="flex flex-col border-b border-[var(--login-border)] px-5 py-[clamp(1rem,3dvh,2.5rem)] [@media(max-height:600px)]:py-3 md:h-full md:border-b-0 md:border-r md:px-10"
+      className="flex flex-col border-b border-[var(--login-border)] bg-surface-shell px-5 py-[clamp(1rem,3dvh,2.5rem)] [@media(max-height:600px)]:py-3 md:h-full md:border-b-0 md:border-r md:px-10"
     >
       <div className="hidden items-center justify-between gap-4 md:flex">
         <div className="inline-flex items-center gap-2 rounded border border-[var(--login-border)] bg-[var(--login-surface)] px-3 py-2">
@@ -75,7 +75,7 @@ export function LoginBrandPanel() {
           proveedores.
         </p>
 
-        <div className="mt-[clamp(1rem,3dvh,2.5rem)] hidden rounded-lg border border-[var(--login-border)] bg-[var(--login-surface)] p-[clamp(0.75rem,1.8dvh,1rem)] shadow-[0_1px_3px_0_rgba(0,0,0,0.45)] md:block">
+        <div className="mt-[clamp(1rem,3dvh,2.5rem)] hidden rounded-lg border border-[var(--login-border)] bg-[var(--login-surface)] p-[clamp(0.75rem,1.8dvh,1rem)] shadow-card md:block">
           <div className="flex items-center justify-between gap-4 border-b border-[var(--login-border)] pb-[clamp(0.5rem,1.2dvh,0.75rem)]">
             <div className="flex items-center gap-2">
               <Boxes
