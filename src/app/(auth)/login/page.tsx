@@ -28,7 +28,7 @@ export default function LoginPage() {
   const router = useRouter();
   const loginMutation = useLogin();
 
-  const { control, handleSubmit, setError, clearErrors } =
+  const { control, handleSubmit, setError, clearErrors, setFocus } =
     useForm<LoginFormValues>({
       defaultValues: {
         email: "",
@@ -39,6 +39,8 @@ export default function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     if (isSubmitting) return;
 
+    let firstInvalidField: keyof LoginFormValues | null = null;
+
     await submitLoginForm(values, {
       loginFn: (input) => loginMutation.mutateAsync(input),
       onSuccess: () => {
@@ -48,6 +50,7 @@ export default function LoginPage() {
         setGeneralError(message);
       },
       onFieldError: (field, message) => {
+        if (!firstInvalidField) firstInvalidField = field;
         setError(field, { type: "manual", message });
       },
       onClearErrors: () => {
@@ -56,6 +59,11 @@ export default function LoginPage() {
       },
       setSubmitting: setIsSubmitting,
     });
+
+    const fieldToFocus = firstInvalidField;
+    if (fieldToFocus) {
+      requestAnimationFrame(() => setFocus(fieldToFocus));
+    }
   });
 
   return (
@@ -64,7 +72,7 @@ export default function LoginPage() {
 
       <section
         aria-labelledby="login-heading"
-        className="flex min-h-0 flex-1 items-center justify-center px-5 py-[clamp(1.25rem,4dvh,3rem)] [@media(max-height:600px)]:py-4 md:px-10"
+        className="flex min-h-0 flex-1 items-center justify-center bg-surface px-5 py-[clamp(1.25rem,4dvh,3rem)] [@media(max-height:600px)]:py-4 md:px-10"
       >
         <div className="w-full max-w-[528px]">
           <div className="mb-[clamp(1rem,2.5dvh,1.75rem)] [@media(max-height:600px)]:mb-3">
@@ -116,7 +124,9 @@ export default function LoginPage() {
                   tone="dark"
                   leadingIcon={<Mail />}
                   error={fieldState.error?.message}
+                  inputRef={field.ref}
                   inputProps={{
+                    name: "email",
                     type: "email",
                     value: field.value,
                     onChange: field.onChange,
@@ -159,7 +169,9 @@ export default function LoginPage() {
                     </button>
                   }
                   error={fieldState.error?.message}
+                  inputRef={field.ref}
                   inputProps={{
+                    name: "password",
                     type: showPassword ? "text" : "password",
                     value: field.value,
                     onChange: field.onChange,
@@ -195,10 +207,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          <p className="mt-[clamp(1rem,2.5dvh,2rem)] hidden border-t border-[var(--login-border)] pt-[clamp(0.75rem,2dvh,1.25rem)] text-center text-body-sm text-[var(--login-text-subtle)] md:block">
-            Acceso restringido a personal autorizado.
-          </p>
         </div>
       </section>
     </div>

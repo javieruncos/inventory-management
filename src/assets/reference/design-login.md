@@ -4,11 +4,12 @@ colors:
   background: '#f6f8fc'
   surface: '#ffffff'
   surface-container-low: '#f8fafc'
-  surface-container: '#fafbfe'
+  surface-container: '#eef2ff'
   on-surface: '#0b1c30'
   on-surface-variant: '#5e6f87'
   outline: '#eef1f6'
   outline-variant: '#e2e8f0'
+  outline-input: '#7a8aa3'
   primary: '#5b5fc7'
   on-primary: '#ffffff'
   primary-container: '#eef2ff'
@@ -136,22 +137,23 @@ No utilizar:
 
 ### Surfaces
 
-- **Canvas base (`#F6F8FC`)**: fondo general del Login y de la columna de formulario.
-- **Panel de marca (`#FAFBFE`)**: fondo de la columna izquierda; coincide con `surface-shell` del Dashboard.
-- **Surface (`#FFFFFF`)**: card de capacidades, topbar pill, logo e inputs.
+- **Canvas base (`#F6F8FC`)**: fondo global del Login y fallback; las columnas usan fondos propios.
+- **Panel de marca (`#EEF2FF`)**: fondo de la columna izquierda; usa `primary-soft` del Dashboard.
+- **Surface (`#FFFFFF`)**: fondo de la columna derecha, card de capacidades, topbar pill, logo e inputs.
 - **Nested surface (`#F8FAFC`)**: chips internos de capacidades y estados de hover.
 
 ### Boundaries
 
 - **Border (`#EEF1F6`)**: separadores, cards y panel.
-- **Strong border (`#E2E8F0`)**: inputs, logo y perímetros interactivos.
+- **Strong border (`#E2E8F0`)**: logo y perímetros interactivos fuera de los inputs.
+- **Input border (`#7A8AA3`)**: exclusivo de los inputs del Login; ≥3:1 sobre `#FFFFFF` (`--login-border-input`).
 - **Divider (`#F1F5F9`)**: divisiones internas finas.
 
 ### Text
 
 - **Primary text (`#0B1C30`)**: títulos, valores de input y contenido principal.
 - **Labels / strong secondary (`#334155`)**: labels de formulario, subtítulos de marca y capacidades.
-- **Secondary (`#5E6F87`)**: párrafos, ayudas y footer sobre canvas.
+- **Secondary (`#5E6F87`)**: párrafos, ayudas y footer sobre superficies claras.
 - **Placeholder (`#5E6F87`)**: placeholders sobre superficies blancas.
 - No utilizar `#94A3B8` como texto significativo: su contraste sobre blanco es insuficiente.
 
@@ -179,8 +181,9 @@ No utilizar:
 
 ## Layout
 
-- Desktop y tablet: dos columnas 50/50.
+- Desktop y tablet: dos columnas 50/50; izquierda `#EEF2FF`, derecha `#FFFFFF`.
 - La columna izquierda contiene marca, propuesta de valor, card de capacidades y footer.
+- El aviso “Acceso restringido a personal autorizado” se muestra una sola vez, en el footer del panel izquierdo en desktop.
 - La columna derecha contiene el formulario.
 - Mobile: columna única; el panel de marca se compacta y se oculta el caption redundante.
 - Mantener las alturas, spacing, tipografía y breakpoints existentes.
@@ -192,7 +195,7 @@ No utilizar:
 
 ### Brand panel
 
-- Background `surface-container` (`#FAFBFE`).
+- Background `primary-soft` (`#EEF2FF`).
 - Borde derecho `#EEF1F6`.
 - Card de capacidades blanca, borde `#EEF1F6`, sombra `shadow-card`.
 - Chips internos `#F8FAFC`.
@@ -201,8 +204,8 @@ No utilizar:
 
 ### Form
 
-- Panel derecho sobre canvas `#F6F8FC`.
-- Inputs blancos, borde `#E2E8F0`, texto `#0B1C30`, placeholder `#5E6F87`.
+- Panel derecho sobre `surface` (`#FFFFFF`).
+- Inputs blancos, borde `#7A8AA3` (`--login-border-input`), texto `#0B1C30`, placeholder `#5E6F87`.
 - Focus `#5B5FC7`.
 - CTA `#5B5FC7` con texto blanco y hover `#4F46E5`.
 - Toggle de contraseña `#5E6F87`, hover `#0B1C30`, focus `#5B5FC7`.
@@ -219,6 +222,7 @@ No utilizar:
 
 - Mantener labels visibles y asociados.
 - Mantener `aria-invalid` y `aria-describedby` en errores.
+- Al fallar la validación, dirigir el foco al primer campo inválido; los errores generales de autenticación no mueven el foco.
 - No comunicar errores solo por color.
 - Mantener foco visible y navegación por teclado.
 - Mantener contraste AA en textos y CTA.

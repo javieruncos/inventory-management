@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref } from "react";
 import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -14,6 +14,7 @@ type FormFieldProps = {
   tone?: FormFieldTone;
   leadingIcon?: ReactNode;
   trailingAction?: ReactNode;
+  inputRef?: Ref<HTMLInputElement>;
   inputProps?: Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "required">;
 };
 
@@ -26,6 +27,7 @@ export function FormField({
   tone = "default",
   leadingIcon,
   trailingAction,
+  inputRef,
   inputProps,
 }: FormFieldProps) {
   const hintId = hint ? `${id}-hint` : undefined;
@@ -69,6 +71,7 @@ export function FormField({
         <input
           id={id}
           required={required}
+          ref={inputRef}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={cn(
@@ -78,7 +81,7 @@ export function FormField({
                   "transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--login-focus)]",
                   error
                     ? "border-[var(--login-error)]"
-                    : "border-[var(--login-border-strong)]",
+                    : "border-[var(--login-border-input)]",
                   leadingIcon ? "pl-10" : "pl-3",
                   trailingAction ? "pr-12" : "pr-3",
                 )

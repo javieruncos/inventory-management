@@ -35,7 +35,7 @@ export function LoginBrandPanel() {
   return (
     <aside
       aria-label="Información del sistema"
-      className="flex flex-col border-b border-[var(--login-border)] bg-surface-shell px-5 py-[clamp(1rem,3dvh,2.5rem)] [@media(max-height:600px)]:py-3 md:h-full md:border-b-0 md:border-r md:px-10"
+      className="flex flex-col border-b border-[var(--login-border)] bg-primary-soft px-5 py-[clamp(1rem,3dvh,2.5rem)] [@media(max-height:600px)]:py-3 md:h-full md:border-b-0 md:border-r md:px-10"
     >
       <div className="hidden items-center justify-between gap-4 md:flex">
         <div className="inline-flex items-center gap-2 rounded border border-[var(--login-border)] bg-[var(--login-surface)] px-3 py-2">
