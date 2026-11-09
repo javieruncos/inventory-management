@@ -105,6 +105,10 @@ La profundidad debe utilizarse de forma sutil y funcional.
 
 No utilizar neumorphism de forma evidente aunque la referencia utilice micro-elevaciones suaves.
 
+### Excepción localizada: Login
+
+El Login es una excepción deliberada y localizada a la dirección visual clara global. Su identidad propia —panel de marca teal/grafito y formulario claro— se documenta en `src/assets/reference/design-login.md` y no modifica los tokens, superficies, componentes ni la identidad visual del Dashboard o del resto de la aplicación.
+
 ---
 
 # 4. Design System
