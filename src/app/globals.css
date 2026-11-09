@@ -145,25 +145,109 @@
   }
 }
 
+/*
+ * Login-only dark theme.
+ * Deliberate localized exception to the light Dashboard identity.
+ * Source of truth: src/assets/reference/design-login.md.
+ */
 .login-theme {
+  color-scheme: dark;
+  --login-brand-bg: #082c2b;
+  --login-brand-deep: #061f20;
+  --login-brand-ink: #041718;
+  --login-brand-surface: #12312f;
+  --login-bg: #101719;
+  --login-bg-deep: #0c1315;
+  --login-surface: #172224;
+  --login-surface-raised: #1a2a2c;
+  --login-border: #263a3c;
+  --login-border-strong: #34504d;
+  --login-border-input: #5a7c75;
+  --login-text: #d7e2df;
+  --login-text-strong: #f1f5f4;
+  --login-text-muted: #a0b2af;
+  --login-text-subtle: #8fa6a1;
+  --login-primary: #35b6a0;
+  --login-primary-hover: #45c4b0;
+  --login-on-primary: #061f20;
+  --login-accent-text: #35b6a0;
+  --login-focus: #35b6a0;
+  --login-error: #fca5a5;
+  --login-error-bg: #3a1d20;
+  --login-error-border: #f87171;
+}
+
+.login-brand-panel {
+  background:
+    radial-gradient(
+      ellipse at 18% 18%,
+      rgb(53 182 160 / 0.14),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 82% 88%,
+      rgb(53 182 160 / 0.08),
+      transparent 50%
+    ),
+    linear-gradient(
+      145deg,
+      var(--login-brand-bg) 0%,
+      var(--login-brand-deep) 58%,
+      var(--login-brand-ink) 100%
+    );
+}
+
+/*
+ * Right form panel: light surface inside the login-only dark shell.
+ * The left brand panel and AuthGate keep the dark tokens.
+ */
+.login-form-panel {
   color-scheme: light;
-  --login-bg: #f6f8fc;
-  --login-surface: #ffffff;
-  --login-surface-raised: #f8fafc;
-  --login-border: #eef1f6;
-  --login-border-strong: #e2e8f0;
+  color: var(--login-text);
+  --login-surface: #f8fafc;
+  --login-border: #e5e7eb;
+  --login-border-strong: #cbd5e1;
   --login-border-input: #7a8aa3;
   --login-text: #334155;
   --login-text-strong: #0b1c30;
   --login-text-muted: #5e6f87;
-  --login-text-subtle: #5e6f87;
-  --login-primary: #5b5fc7;
-  --login-primary-hover: #4f46e5;
-  --login-on-primary: #ffffff;
-  --login-focus: #5b5fc7;
+  --login-text-subtle: #64748b;
+  --login-accent-text: #0f766e;
+  --login-focus: #0f766e;
   --login-error: #b91c1c;
   --login-error-bg: #fef2f2;
-  --login-error-border: rgb(239 68 68 / 0.35);
+  --login-error-border: #ef4444;
+  background: #ffffff;
+}
+
+.login-brand-surface {
+  background: linear-gradient(
+    180deg,
+    var(--login-brand-surface) 0%,
+    var(--login-brand-deep) 100%
+  );
+  box-shadow: inset 0 1px 0 rgb(241 245 244 / 0.06);
+}
+
+.login-theme ::selection {
+  background: rgb(53 182 160 / 0.28);
+  color: var(--login-text-strong);
+}
+
+.login-theme :focus-visible {
+  outline-color: var(--login-focus);
+}
+
+.login-form-panel button:focus-visible {
+  outline-color: var(--login-focus);
+}
+
+.login-theme input:-webkit-autofill,
+.login-theme input:-webkit-autofill:hover,
+.login-theme input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--login-text-strong);
+  -webkit-box-shadow: 0 0 0 1000px var(--login-surface) inset;
+  caret-color: var(--login-text-strong);
 }
 
 /* Motion reducido (DESIGN.md §19): sin animaciones ni transiciones decorativas */

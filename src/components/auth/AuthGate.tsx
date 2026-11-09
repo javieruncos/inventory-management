@@ -30,7 +30,7 @@ function FallbackSurface({ tone, className, children }: FallbackSurfaceProps) {
     return (
       <div
         className={cn(
-          "w-full rounded-lg border border-[var(--login-border)] bg-[var(--login-surface)] p-5 shadow-card",
+          "w-full rounded-lg border border-[var(--login-border)] bg-[var(--login-surface)] p-5 shadow-[0_18px_50px_-24px_rgb(0_0_0/0.55)]",
           className,
         )}
       >

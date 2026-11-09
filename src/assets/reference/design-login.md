@@ -1,55 +1,51 @@
 ---
-name: Inventory Login — Dashboard-aligned
+name: Inventory Login — Operational teal editorial split
 colors:
-  background: '#f6f8fc'
-  surface: '#ffffff'
-  surface-container-low: '#f8fafc'
-  surface-container: '#eef2ff'
-  on-surface: '#0b1c30'
-  on-surface-variant: '#5e6f87'
-  outline: '#eef1f6'
-  outline-variant: '#e2e8f0'
-  outline-input: '#7a8aa3'
-  primary: '#5b5fc7'
-  on-primary: '#ffffff'
-  primary-container: '#eef2ff'
-  on-primary-container: '#4f46e5'
-  success: '#10b981'
-  success-text: '#047857'
-  success-container: '#ecfdf5'
-  warning: '#f59e0b'
-  warning-text: '#b45309'
-  warning-container: '#fffbeb'
-  error: '#ef4444'
-  error-text: '#b91c1c'
-  error-container: '#fef2f2'
-  neutral: '#94a3b8'
-  neutral-text: '#475569'
-  neutral-container: '#f1f5f9'
+  brand-background: '#082C2B'
+  brand-deep: '#061F20'
+  brand-ink: '#041718'
+  brand-surface: '#12312F'
+  brand-on-surface: '#F1F5F4'
+  brand-on-surface-variant: '#D7E2DF'
+  brand-on-surface-muted: '#A0B2AF'
+  brand-on-surface-subtle: '#8FA6A1'
+  brand-outline: '#263A3C'
+  brand-outline-strong: '#34504D'
+  background: '#FFFFFF'
+  surface: '#F8FAFC'
+  surface-raised: '#F1F5F9'
+  on-surface: '#0B1C30'
+  on-surface-strong: '#0B1C30'
+  on-surface-variant: '#5E6F87'
+  on-surface-muted: '#64748B'
+  outline: '#E5E7EB'
+  outline-strong: '#CBD5E1'
+  outline-input: '#7A8AA3'
+  accent-text: '#0F766E'
+  primary: '#35B6A0'
+  on-primary: '#061F20'
+  primary-hover: '#45C4B0'
+  error: '#B91C1C'
+  error-container: '#FEF2F2'
+  error-outline: '#EF4444'
 typography:
   display-lg:
     fontFamily: Plus Jakarta Sans
-    fontSize: 40px
+    fontSize: 68px
     fontWeight: '700'
-    lineHeight: 48px
-    letterSpacing: -0.03em
+    lineHeight: 0.98
+    letterSpacing: -0.035em
   headline-xl:
     fontFamily: Plus Jakarta Sans
-    fontSize: 32px
+    fontSize: 40px
     fontWeight: '600'
-    lineHeight: 40px
-    letterSpacing: -0.025em
-  headline-xl-mobile:
-    fontFamily: Plus Jakarta Sans
-    fontSize: 30px
-    fontWeight: '700'
-    lineHeight: 36px
+    lineHeight: 1.05
     letterSpacing: -0.03em
   headline-lg:
     fontFamily: Plus Jakarta Sans
-    fontSize: 28px
+    fontSize: 32px
     fontWeight: '600'
-    lineHeight: 34px
+    lineHeight: 1.1
     letterSpacing: -0.025em
   headline-sm:
     fontFamily: Plus Jakarta Sans
@@ -103,91 +99,102 @@ spacing:
 
 ## Purpose
 
-Este documento describe la identidad visual del Login de Inventory Management. El Login **no es una marca separada**: reutiliza la identidad cromática real del Dashboard.
+Este documento define la identidad visual del Login de Inventory Management.
 
-La fuente de verdad es el sistema implementado del Dashboard:
+El Login es una **excepción deliberada y localizada** a la dirección clara del Dashboard. Reutiliza la misma marca, tipografía y contenido funcional, pero combina un panel de marca teal/grafito con un panel de formulario claro. No autoriza cambiar la identidad visual global ni los tokens compartidos de la aplicación.
 
-- `src/app/globals.css`
-- `DESIGN.md`
-- `src/assets/reference/dashboard-reference.png`
-
-Este documento no autoriza colores, superficies, sombras ni acentos fuera de esa identidad.
+La composición y la estética toman como referencia `src/assets/reference/screen.png`, adaptando únicamente el contenido real existente. No se copian métricas, funciones, marcas, estados ni certificaciones ficticias de la referencia.
 
 ## Brand & Style
 
-El Login comparte el lenguaje del Dashboard:
-
-- canvas operacional claro
-- superficies blancas
-- bordes sutiles
-- acento índigo
-- jerarquía tipográfica fuerte
-- elevación muy sutil
+- Azul petróleo profundo con gradiente tonal controlado.
+- Iluminación ambiental teal, sutil y estática.
+- Panel de formulario blanco con textos oscuros.
+- Composición tipográfica protagonista.
+- Superficies elevadas por tono y borde, no por sombras fuertes.
+- Espacio negativo generoso.
+- Precisión operativa, no decoración genérica.
 
 No utilizar:
 
-- tema oscuro
-- estética obsidiana
-- acento esmeralda como color de marca
-- azul de foco ajeno al sistema
-- glassmorphism, neumorphism o gradientes decorativos
-- métricas, marcas o estados inventados
+- fondos grises apagados como base del panel
+- glassmorphism
+- backdrop blur
+- neón
+- grids decorativos
+- círculos flotantes
+- ilustraciones o fotografías externas
+- métricas, marcas, estados o funciones inventadas
+- sombras negras fuertes
+- animaciones constantes
 
 ## Colors
 
-### Surfaces
+### Brand panel
 
-- **Canvas base (`#F6F8FC`)**: fondo global del Login y fallback; las columnas usan fondos propios.
-- **Panel de marca (`#EEF2FF`)**: fondo de la columna izquierda; usa `primary-soft` del Dashboard.
-- **Surface (`#FFFFFF`)**: fondo de la columna derecha, card de capacidades, topbar pill, logo e inputs.
-- **Nested surface (`#F8FAFC`)**: chips internos de capacidades y estados de hover.
+- **Brand background (`#082C2B`)**: base del panel izquierdo.
+- **Brand deep (`#061F20`)**: transición del gradiente y footer.
+- **Brand ink (`#041718`)**: extremo profundo del gradiente.
+- **Brand surface (`#12312F`)**: topbar, logo y card de capacidades.
+
+### Form panel
+
+- **Background (`#FFFFFF`)**: base del panel derecho.
+- **Surface (`#F8FAFC`)**: inputs.
+- **Surface raised (`#F1F5F9`)**: realces internos cuando sean necesarios.
 
 ### Boundaries
 
-- **Border (`#EEF1F6`)**: separadores, cards y panel.
-- **Strong border (`#E2E8F0`)**: logo y perímetros interactivos fuera de los inputs.
-- **Input border (`#7A8AA3`)**: exclusivo de los inputs del Login; ≥3:1 sobre `#FFFFFF` (`--login-border-input`).
-- **Divider (`#F1F5F9`)**: divisiones internas finas.
+- **Brand border (`#263A3C`)**: separadores, cards y topbar del panel izquierdo.
+- **Brand strong border (`#34504D`)**: logo y perímetros del panel izquierdo.
+- **Form border (`#E5E7EB`)**: separadores del panel derecho.
+- **Form strong border (`#CBD5E1`)**: perímetros de énfasis del panel derecho.
+- **Input border (`#7A8AA3`)**: exclusivo de inputs; 3.35:1 sobre `#F8FAFC`.
 
 ### Text
 
-- **Primary text (`#0B1C30`)**: títulos, valores de input y contenido principal.
-- **Labels / strong secondary (`#334155`)**: labels de formulario, subtítulos de marca y capacidades.
-- **Secondary (`#5E6F87`)**: párrafos, ayudas y footer sobre superficies claras.
-- **Placeholder (`#5E6F87`)**: placeholders sobre superficies blancas.
-- No utilizar `#94A3B8` como texto significativo: su contraste sobre blanco es insuficiente.
+- **Form strong (`#0B1C30`)**: títulos y valores de input del panel derecho.
+- **Form default (`#334155`)**: labels y contenido principal del panel derecho.
+- **Form muted (`#5E6F87`)**: párrafos y ayudas del panel derecho.
+- **Form subtle (`#64748B`)**: placeholders y metadatos del panel derecho.
+- **Brand strong (`#F1F5F4`)**: títulos del panel izquierdo.
+- **Brand default (`#D7E2DF`)**: labels y contenido del panel izquierdo.
+- **Brand muted (`#A0B2AF`)**: párrafos y ayudas del panel izquierdo.
+- **Brand subtle (`#8FA6A1`)**: placeholders y metadatos del panel izquierdo.
 
 ### Accent
 
-- **Primary (`#5B5FC7`)**: CTA, foco, iconos de marca, dot del portal y estados activos.
-- **Primary hover (`#4F46E5`)**: hover del CTA y del acento.
-- **Primary soft (`#EEF2FF`)**: fondos de selección o información.
-- **On primary (`#FFFFFF`)**: texto e iconos sobre el CTA.
+- **Primary (`#35B6A0`)**: fondo del CTA; se conserva exactamente.
+- **Primary hover (`#45C4B0`)**: hover del CTA.
+- **On primary (`#061F20`)**: texto e iconos sobre el CTA.
+- **Accent text (`#0F766E`)**: eyebrow, asterisco requerido y foco sobre el panel claro.
+
+`#F1F5F4` sobre `#35B6A0` tiene 2.29:1 y no debe usarse para texto de CTA. El CTA usa `#061F20` (6.82:1).
 
 ### Semantics
 
-- **Success**: background `#ECFDF5`, text `#047857`, indicator `#10B981`.
-- **Warning**: background `#FFFBEB`, text `#B45309`, indicator `#F59E0B`.
-- **Error**: background `#FEF2F2`, text `#B91C1C`, indicator `#EF4444`.
-- **Archived / neutral**: background `#F1F5F9`, text `#475569`, indicator `#94A3B8`.
-- **Information**: no dedicated token. Reutilizar `primary-soft` + `primary`.
-
-`#10B981` es éxito, no marca. No debe utilizarse como color principal del CTA.
+- **Error text (`#B91C1C`)**: mensajes de error sobre fondo claro; 5.91:1 sobre `#FEF2F2`.
+- **Error background (`#FEF2F2`)**: alerta general.
+- **Error border (`#EF4444`)**: borde de error.
+- No comunicar errores solo por color.
 
 ### Focus
 
-- Focus visible: `#5B5FC7`, anillo de 2px, offset de 1–2px según componente.
-- No utilizar `#3B82F6`.
+- Focus visible en el panel derecho: `#0F766E`, anillo de 2px, offset de 1–2px; 5.47:1 sobre blanco.
+- El fallback dark de `AuthGate` conserva el foco teal `#35B6A0`.
+- No utilizar azul de foco ajeno al Login.
 
 ## Layout
 
-- Desktop y tablet: dos columnas 50/50; izquierda `#EEF2FF`, derecha `#FFFFFF`.
-- La columna izquierda contiene marca, propuesta de valor, card de capacidades y footer.
-- El aviso “Acceso restringido a personal autorizado” se muestra una sola vez, en el footer del panel izquierdo en desktop.
-- La columna derecha contiene el formulario.
-- Mobile: columna única; el panel de marca se compacta y se oculta el caption redundante.
-- Mantener las alturas, spacing, tipografía y breakpoints existentes.
-- Estado normal: sin scroll en las resoluciones soportadas.
+- Desktop y tablet (`md`, desde 768px): dos columnas 50/50.
+- La columna izquierda es teal/grafito y contiene marca, propuesta de valor, card de capacidades y footer.
+- La columna derecha es blanca y contiene únicamente el formulario, centrado verticalmente.
+- El formulario no se envuelve en una card contenedora.
+- Mobile: columna única; el panel de marca se compacta; card de capacidades y footer se ocultan.
+- Mantener `w-full min-w-0` en la raíz del Login y en sus columnas para evitar que un padre flex/grid las encoja.
+- No añadir `max-width` al contenedor de las columnas.
+- Formulario: `max-w-[528px]`; no es un límite del layout.
+- Estado normal: sin scroll en resoluciones soportadas.
 - Alturas insuficientes o errores: scroll interno como fallback, sin ocultar contenido.
 - Targets táctiles: inputs 44/48px, CTA 48px, toggle 44×44px.
 
@@ -195,42 +202,64 @@ No utilizar:
 
 ### Brand panel
 
-- Background `primary-soft` (`#EEF2FF`).
-- Borde derecho `#EEF1F6`.
-- Card de capacidades blanca, borde `#EEF1F6`, sombra `shadow-card`.
-- Chips internos `#F8FAFC`.
-- Iconos y dot en `#5B5FC7`.
-- Texto principal `#0B1C30`; secundario `#5E6F87`.
+- Fondo: `.login-brand-panel` con gradiente teal y dos glows radiales de baja opacidad.
+- Borde derecho `#263A3C` en desktop.
+- Topbar y logo sobre `#12312F`, borde `#263A3C/#34504D`.
+- H1 `Inventory Management`: `clamp(2.25rem, 4.2vw, 4.25rem)`, line-height `0.98`, tracking `-0.035em`, `text-balance`.
+- Subtítulo máximo 560px, `text-pretty`.
+- Card de capacidades: `.login-brand-surface`, borde `#263A3C`, radio 8px, brillo interno sutil.
+- Chips de capacidades: `#082C2B`, borde `#263A3C`.
+- Contenido real: Productos, Proveedores, Stock y Movimientos.
+- Footer: “Acceso restringido a personal autorizado” e “Inventory Management”.
 
 ### Form
 
-- Panel derecho sobre `surface` (`#FFFFFF`).
-- Inputs blancos, borde `#7A8AA3` (`--login-border-input`), texto `#0B1C30`, placeholder `#5E6F87`.
-- Focus `#5B5FC7`.
-- CTA `#5B5FC7` con texto blanco y hover `#4F46E5`.
-- Toggle de contraseña `#5E6F87`, hover `#0B1C30`, focus `#5B5FC7`.
+- Fondo: `.login-form-panel` blanco (`#FFFFFF`), sin gradiente ni card contenedora.
+- Inputs `#F8FAFC`, borde `#7A8AA3`, texto `#0B1C30`, placeholder `#64748B`.
+- Labels `#334155`; títulos `#0B1C30`; subtítulos `#5E6F87`.
+- Focus `#0F766E`.
+- CTA `#35B6A0` con texto `#061F20` y hover `#45C4B0`; se conserva exactamente.
+- Toggle de contraseña `#5E6F87`, hover `#0B1C30`, focus `#0F766E`.
 - Error de campo `#B91C1C`.
-- Alerta general: fondo `#FEF2F2`, borde rojo derivado, texto `#B91C1C`.
+- Alerta general: fondo `#FEF2F2`, borde `#EF4444`, texto `#B91C1C`.
+- No añadir SSO, recuperación de contraseña, “recordar dispositivo” ni estados de producto que no existan.
+
+### Session fallback
+
+- El fallback dark de `AuthGate` reutiliza los tokens `--login-*` y una sombra oscura sutil.
+- Mantener los tamaños máximos actuales (420/460px); son estados de carga/error, no el Login.
+- No reutilizar el fallback como contenedor del formulario.
 
 ### Elevation
 
-- Cards: `shadow-card`.
-- No utilizar sombras negras fuertes de dark mode.
-- No introducir nuevas sombras.
+- El panel izquierdo resuelve la profundidad con capas tonales, bordes y un highlight interno.
+- El panel derecho no usa sombras: los inputs se separan por superficie y borde.
+- No usar `shadow-card` sobre superficies dark.
+- El fallback dark puede usar una sombra oscura muy difusa.
+
+## Motion
+
+- Una sola entrada orquestada: fade + translateY de 8–12px, 500–600ms, `cubic-bezier(0.16, 1, 0.3, 1)`.
+- Sin animaciones constantes de glow, parallax ni hover excesivo.
+- Respetar `prefers-reduced-motion`.
 
 ## Accessibility
 
 - Mantener labels visibles y asociados.
 - Mantener `aria-invalid` y `aria-describedby` en errores.
 - Al fallar la validación, dirigir el foco al primer campo inválido; los errores generales de autenticación no mueven el foco.
-- No comunicar errores solo por color.
 - Mantener foco visible y navegación por teclado.
 - Mantener contraste AA en textos y CTA.
+- El panel derecho usa `color-scheme: light`; el shell izquierdo y el fallback de `AuthGate` conservan `color-scheme: dark`.
+- Revisar autofill, scrollbars y controles nativos.
 - Respetar `prefers-reduced-motion`.
 
 ## Restrictions
 
-- No cambiar tipografía, dimensiones, spacing, radios, composición ni comportamiento responsive.
-- No cambiar lógica de autenticación, formularios, validaciones, API ni estados.
-- No usar colores fuera de la paleta del Dashboard.
-- No usar el Login para introducir una segunda identidad visual.
+- No cambiar la familia tipográfica, los radios ni el comportamiento responsive definido en este documento.
+- No cambiar lógica de autenticación, formularios, validaciones, API, rutas ni estados.
+- No usar colores fuera de esta paleta en el Login.
+- No modificar tokens globales del Dashboard.
+- No crear componentes adicionales ni refactorizaciones generales.
+- No usar estilos inline.
+- No descargar ni introducir assets, fuentes o dependencias.

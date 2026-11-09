@@ -51,7 +51,7 @@ export function FormField({
             aria-hidden="true"
             className={
               isDark
-                ? "ml-1 text-[var(--login-primary)]"
+                ? "ml-1 text-[var(--login-accent-text)]"
                 : "ml-1 text-status-out-text"
             }
           >

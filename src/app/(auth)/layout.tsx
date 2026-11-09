@@ -10,7 +10,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <GuestOnly fallbackTone="dark">
       <div className="login-theme flex h-dvh flex-col bg-[var(--login-bg)] text-[var(--login-text)]">
-        <main className="flex min-h-0 w-full flex-1 flex-col">{children}</main>
+        <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+          {children}
+        </main>
       </div>
     </GuestOnly>
   );

@@ -67,29 +67,29 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="login-theme flex h-full min-h-0 flex-col overflow-y-auto bg-[var(--login-bg)] text-[var(--login-text)] md:grid md:grid-cols-2">
+    <div className="login-theme flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto bg-[var(--login-bg)] text-[var(--login-text)] md:grid md:grid-cols-2">
       <LoginBrandPanel />
 
       <section
         aria-labelledby="login-heading"
-        className="flex min-h-0 flex-1 items-center justify-center bg-surface px-5 py-[clamp(1.25rem,4dvh,3rem)] [@media(max-height:600px)]:py-4 md:px-10"
+        className="login-form-panel flex min-h-0 w-full min-w-0 flex-1 items-center justify-center px-5 py-[clamp(1.25rem,4dvh,3rem)] [@media(max-height:600px)]:py-4 md:px-10"
       >
         <div className="w-full max-w-[528px]">
           <div className="mb-[clamp(1rem,2.5dvh,1.75rem)] [@media(max-height:600px)]:mb-3">
-            <p className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--login-primary)]">
+            <p className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--login-accent-text)]">
               <span
                 aria-hidden="true"
-                className="size-1.5 rounded-full bg-[var(--login-primary)]"
+                className="size-1.5 rounded-full bg-[var(--login-accent-text)]"
               />
               Portal de acceso seguro
             </p>
             <h2
               id="login-heading"
-              className="mt-3 text-[28px] font-semibold leading-[34px] tracking-[-0.025em] text-[var(--login-text-strong)] [@media(max-height:600px)]:mt-2 md:text-[32px] md:leading-[40px]"
+              className="mt-3 text-[clamp(2rem,2.8vw,3rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--login-text-strong)] [@media(max-height:600px)]:mt-2"
             >
               Iniciar sesión
             </h2>
-            <p className="mt-2 text-body text-[var(--login-text-muted)] md:text-body-lg">
+            <p className="mt-2 text-pretty text-body text-[var(--login-text-muted)] md:text-body-lg">
               Ingresá tus credenciales para acceder al sistema de inventario.
             </p>
           </div>
