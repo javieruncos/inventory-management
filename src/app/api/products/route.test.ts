@@ -6,11 +6,11 @@ import {
   AuthenticationRequiredError,
   ForbiddenError,
 } from "@/lib/auth/auth-errors";
-import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
+import { getOptionalUser, requireAdmin } from "@/lib/auth/auth-guards";
 import { createProduct, listProducts } from "@/lib/products";
 
 vi.mock("@/lib/auth/auth-guards", () => ({
-  requireUser: vi.fn(),
+  getOptionalUser: vi.fn(),
   requireAdmin: vi.fn(),
 }));
 
@@ -43,7 +43,7 @@ const ADMIN = {
 };
 
 function mockAllowedRoles(): void {
-  vi.mocked(requireUser).mockResolvedValue(USER);
+  vi.mocked(getOptionalUser).mockResolvedValue(USER);
   vi.mocked(requireAdmin).mockResolvedValue(ADMIN);
 }
 
@@ -70,7 +70,7 @@ describe("GET /api/products", () => {
     const response = await GET(new Request(BASE_URL));
 
     expect(response.status).toBe(200);
-    expect(requireUser).toHaveBeenCalledTimes(1);
+    expect(getOptionalUser).toHaveBeenCalledTimes(1);
 
     const json = (await response.json()) as { data: unknown };
 
@@ -79,7 +79,7 @@ describe("GET /api/products", () => {
   });
 
   it("permite el acceso a un administrador autenticado", async () => {
-    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(getOptionalUser).mockResolvedValue(ADMIN);
     vi.mocked(listProducts).mockResolvedValue([]);
 
     const response = await GET(new Request(BASE_URL));
@@ -88,22 +88,22 @@ describe("GET /api/products", () => {
     expect(listProducts).toHaveBeenCalledTimes(1);
   });
 
-  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
-    vi.mocked(requireUser).mockRejectedValue(
-      new AuthenticationRequiredError(),
-    );
+  it("devuelve 200 a un visitante sin autenticación y consulta la lib", async () => {
+    const products = [
+      { _id: "64b000000000000000000040" } as unknown as Product,
+    ];
+    vi.mocked(getOptionalUser).mockResolvedValue(null);
+    vi.mocked(listProducts).mockResolvedValue(products);
 
     const response = await GET(new Request(BASE_URL));
 
-    expect(response.status).toBe(401);
-    expect(listProducts).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(getOptionalUser).toHaveBeenCalledTimes(1);
+    expect(listProducts).toHaveBeenCalledTimes(1);
 
-    const json = (await response.json()) as ErrorEnvelope;
+    const json = (await response.json()) as { data: unknown };
 
-    expect(json.error).toEqual({
-      kind: "UNAUTHORIZED",
-      message: "No autenticado",
-    });
+    expect(json).toEqual({ data: products });
   });
 
   it("devuelve 500 con error genérico en INTERNAL", async () => {

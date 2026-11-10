@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   ArchiveX,
   ArrowLeftRight,
@@ -17,6 +18,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { ApiError } from "@/lib/api";
+import { useActionGuard } from "@/lib/auth/useActionGuard";
 import { summarizeInventory } from "@/lib/dashboard";
 import { toViewStatus, useMovements, useProducts } from "@/lib/queries";
 
@@ -27,6 +29,8 @@ function errorMessageOf(error: unknown, fallback: string): string {
 }
 
 export function Dashboard() {
+  const router = useRouter();
+  const { guard } = useActionGuard();
   const productsQuery = useProducts();
   const movementsQuery = useMovements();
 
@@ -80,10 +84,14 @@ export function Dashboard() {
               <Package aria-hidden="true" size={16} />
               Gestionar productos
             </LinkButton>
-            <LinkButton href="/stock">
+            <Button
+              onClick={() =>
+                void guard(() => router.push("/stock"), { nextPath: "/stock" })
+              }
+            >
               <ArrowLeftRight aria-hidden="true" size={16} />
               Registrar movimiento
-            </LinkButton>
+            </Button>
           </>
         }
         actionsClassName="max-[767px]:w-full max-[767px]:flex-col max-[767px]:items-stretch"

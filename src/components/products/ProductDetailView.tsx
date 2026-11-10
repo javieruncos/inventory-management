@@ -26,6 +26,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TrendPill } from "@/components/ui/TrendPill";
 import { ApiError } from "@/lib/api";
+import { useActionGuard } from "@/lib/auth/useActionGuard";
 import { useCanManageCatalog } from "@/lib/auth/useCanManageCatalog";
 import { cn } from "@/lib/cn";
 import { getStockStatus } from "@/lib/dashboard";
@@ -323,6 +324,7 @@ type DetailDialog = "edit" | "movement" | null;
 export function ProductDetailView({ productId }: ProductDetailViewProps) {
   const router = useRouter();
   const canManage = useCanManageCatalog();
+  const { guard } = useActionGuard();
   const productQuery = useProduct(productId);
   const movementsQuery = useProductMovements(productId);
   const categoriesQuery = useCategories();
@@ -387,8 +389,12 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
   };
 
   const openMovement = (event: MouseEvent<HTMLButtonElement>) => {
-    triggerRef.current = event.currentTarget;
-    setDialog("movement");
+    const trigger = event.currentTarget;
+
+    void guard(() => {
+      triggerRef.current = trigger;
+      setDialog("movement");
+    });
   };
 
   const closeDialog = () => {

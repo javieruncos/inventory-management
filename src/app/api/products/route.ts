@@ -1,10 +1,10 @@
 import { errorResponse, ok, parseJsonBody } from "@/app/api/_lib/http";
-import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
+import { getOptionalUser, requireAdmin } from "@/lib/auth/auth-guards";
 import { createProduct, listProducts } from "@/lib/products";
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    await requireUser();
+    await getOptionalUser();
 
     const products = await listProducts();
 

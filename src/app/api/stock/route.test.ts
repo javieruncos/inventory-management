@@ -4,10 +4,11 @@ import type { StockMovement } from "@/db/models/StockMovement";
 import type { StockMovementWithProductDTO } from "@/types/stockMovement";
 import { GET, POST } from "@/app/api/stock/route";
 import { AuthenticationRequiredError } from "@/lib/auth/auth-errors";
-import { requireUser } from "@/lib/auth/auth-guards";
+import { getOptionalUser, requireUser } from "@/lib/auth/auth-guards";
 import { createMovement, listMovements } from "@/lib/stock";
 
 vi.mock("@/lib/auth/auth-guards", () => ({
+  getOptionalUser: vi.fn(),
   requireUser: vi.fn(),
 }));
 
@@ -38,6 +39,7 @@ const ADMIN = {
 };
 
 function mockAllowedUser(): void {
+  vi.mocked(getOptionalUser).mockResolvedValue(USER);
   vi.mocked(requireUser).mockResolvedValue(USER);
 }
 
@@ -71,7 +73,7 @@ describe("GET /api/stock", () => {
     const response = await GET(new Request(BASE_URL));
 
     expect(response.status).toBe(200);
-    expect(requireUser).toHaveBeenCalledTimes(1);
+    expect(getOptionalUser).toHaveBeenCalledTimes(1);
     expect(listMovements).toHaveBeenCalledWith(undefined);
 
     const json = (await response.json()) as { data: unknown };
@@ -80,7 +82,7 @@ describe("GET /api/stock", () => {
   });
 
   it("permite el acceso a un administrador autenticado", async () => {
-    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(getOptionalUser).mockResolvedValue(ADMIN);
     vi.mocked(listMovements).mockResolvedValue(movements);
 
     const response = await GET(new Request(BASE_URL));
@@ -89,15 +91,19 @@ describe("GET /api/stock", () => {
     expect(listMovements).toHaveBeenCalledWith(undefined);
   });
 
-  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
-    vi.mocked(requireUser).mockRejectedValue(
-      new AuthenticationRequiredError(),
-    );
+  it("devuelve 200 a un visitante sin autenticación y consulta la lib", async () => {
+    vi.mocked(getOptionalUser).mockResolvedValue(null);
+    vi.mocked(listMovements).mockResolvedValue(movements);
 
     const response = await GET(new Request(BASE_URL));
 
-    expect(response.status).toBe(401);
-    expect(listMovements).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(getOptionalUser).toHaveBeenCalledTimes(1);
+    expect(listMovements).toHaveBeenCalledWith(undefined);
+
+    const json = (await response.json()) as { data: unknown };
+
+    expect(json).toEqual({ data: movements });
   });
 
   it("devuelve 200 filtrando cuando ?productId es válido", async () => {

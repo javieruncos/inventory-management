@@ -17,7 +17,11 @@ import {
   AuthenticationRequiredError,
   ForbiddenError,
 } from "@/lib/auth/auth-errors";
-import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
+import {
+  getOptionalUser,
+  requireAdmin,
+  requireUser,
+} from "@/lib/auth/auth-guards";
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   JWT_AUDIENCE,
@@ -277,6 +281,86 @@ describe("requireUser", () => {
     vi.stubEnv("JWT_SECRET", "secreto-corto");
 
     const error = await getThrownError(requireUser());
+
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toMatchObject({
+      kind: "INTERNAL",
+      message: "Error interno del servidor",
+    });
+    expect(connectDB).not.toHaveBeenCalled();
+  });
+});
+
+describe("getOptionalUser", () => {
+  it("devuelve el usuario cuando hay una sesión válida", async () => {
+    const { findOne } = mockUser(makeUser({ role: "user" }));
+    mockCookie(signAccessToken(USER_ID));
+
+    const user = await getOptionalUser();
+
+    expect(user).toEqual({
+      id: USER_ID,
+      email: EMAIL,
+      role: "user",
+    });
+    expect(findOne).toHaveBeenCalledTimes(1);
+  });
+
+  it("devuelve null sin cookie sin consultar MongoDB", async () => {
+    mockCookie();
+
+    const user = await getOptionalUser();
+
+    expect(user).toBeNull();
+    expect(connectDB).not.toHaveBeenCalled();
+  });
+
+  it("devuelve null ante un JWT inválido", async () => {
+    mockCookie("esto-no-es-un-jwt");
+
+    const user = await getOptionalUser();
+
+    expect(user).toBeNull();
+    expect(connectDB).not.toHaveBeenCalled();
+  });
+
+  it("devuelve null cuando el usuario no existe o está inactivo", async () => {
+    const { findOne } = mockUser(null);
+    mockCookie(signAccessToken(USER_ID));
+
+    const user = await getOptionalUser();
+
+    expect(user).toBeNull();
+    expect(findOne).toHaveBeenCalledWith({
+      _id: USER_ID,
+      isActive: true,
+    });
+  });
+
+  it("propaga un error de MongoDB como INTERNAL", async () => {
+    const findOne = vi.spyOn(UserModel, "findOne") as unknown as MockInstance<
+      (filter?: unknown) => QueryChain
+    >;
+    findOne.mockImplementation(() => {
+      throw new Error("db down");
+    });
+    mockCookie(signAccessToken(USER_ID));
+
+    const error = await getThrownError(getOptionalUser());
+
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toMatchObject({
+      kind: "INTERNAL",
+      message: "Error interno del servidor",
+    });
+  });
+
+  it("propaga una configuración JWT inválida como INTERNAL", async () => {
+    const token = signAccessToken(USER_ID);
+    mockCookie(token);
+    vi.stubEnv("JWT_SECRET", "secreto-corto");
+
+    const error = await getThrownError(getOptionalUser());
 
     expect(error).toBeInstanceOf(AppError);
     expect(error).toMatchObject({

@@ -6,6 +6,7 @@ import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
+import { getSafeNextPath } from "@/lib/auth/redirect";
 import { getSessionGateState } from "@/lib/auth/sessionGate";
 import { useMe } from "@/lib/queries";
 
@@ -144,18 +145,11 @@ function SessionErrorFallback({
   );
 }
 
-export function RequireAuth({ children }: AuthGateProps) {
-  const router = useRouter();
+export function AppAccessGate({ children }: AuthGateProps) {
   const session = useMe();
   const state = getSessionGateState(session);
 
-  useEffect(() => {
-    if (state === "anonymous") {
-      router.replace("/login");
-    }
-  }, [router, state]);
-
-  if (state === "authenticated") {
+  if (state === "authenticated" || state === "anonymous") {
     return <>{children}</>;
   }
 
@@ -181,7 +175,8 @@ export function GuestOnly({
 
   useEffect(() => {
     if (state === "authenticated") {
-      router.replace("/");
+      const params = new URLSearchParams(window.location.search);
+      router.replace(getSafeNextPath(params.get("next")));
     }
   }, [router, state]);
 
