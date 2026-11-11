@@ -149,6 +149,10 @@ export function AppAccessGate({ children }: AuthGateProps) {
   const session = useMe();
   const state = getSessionGateState(session);
 
+  if (session.isLoading || session.isPending) {
+    return <>{children}</>;
+  }
+
   if (state === "authenticated" || state === "anonymous") {
     return <>{children}</>;
   }
