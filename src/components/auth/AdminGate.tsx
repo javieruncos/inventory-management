@@ -1,9 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { buildLoginPath } from "@/lib/auth/redirect";
 import { useCanManageUsers } from "@/lib/auth/useCanManageUsers";
 import { useMe } from "@/lib/queries";
 
@@ -12,8 +14,16 @@ type AdminGateProps = {
 };
 
 export function AdminGate({ children }: AdminGateProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { data: user } = useMe();
   const canManageUsers = useCanManageUsers();
+
+  useEffect(() => {
+    if (user === null) {
+      router.replace(buildLoginPath(pathname));
+    }
+  }, [pathname, router, user]);
 
   if (!user) return null;
 

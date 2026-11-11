@@ -1,10 +1,10 @@
 import { errorResponse, ok, parseJsonBody } from "@/app/api/_lib/http";
-import { requireUser } from "@/lib/auth/auth-guards";
+import { getOptionalUser, requireUser } from "@/lib/auth/auth-guards";
 import { createMovement, listMovements } from "@/lib/stock";
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    await requireUser();
+    await getOptionalUser();
 
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId") ?? undefined;

@@ -4,7 +4,7 @@ import {
   parseJsonBody,
   type IdRouteContext,
 } from "@/app/api/_lib/http";
-import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
+import { getOptionalUser, requireAdmin } from "@/lib/auth/auth-guards";
 import { deleteProduct, getProduct, updateProduct } from "@/lib/products";
 
 export async function GET(
@@ -12,7 +12,7 @@ export async function GET(
   { params }: IdRouteContext,
 ): Promise<Response> {
   try {
-    await requireUser();
+    await getOptionalUser();
 
     const { id } = await params;
 

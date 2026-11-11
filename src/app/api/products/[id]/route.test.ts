@@ -7,11 +7,11 @@ import {
   AuthenticationRequiredError,
   ForbiddenError,
 } from "@/lib/auth/auth-errors";
-import { requireAdmin, requireUser } from "@/lib/auth/auth-guards";
+import { getOptionalUser, requireAdmin } from "@/lib/auth/auth-guards";
 import { deleteProduct, getProduct, updateProduct } from "@/lib/products";
 
 vi.mock("@/lib/auth/auth-guards", () => ({
-  requireUser: vi.fn(),
+  getOptionalUser: vi.fn(),
   requireAdmin: vi.fn(),
 }));
 
@@ -45,7 +45,7 @@ const ADMIN = {
 };
 
 function mockAllowedRoles(): void {
-  vi.mocked(requireUser).mockResolvedValue(USER);
+  vi.mocked(getOptionalUser).mockResolvedValue(USER);
   vi.mocked(requireAdmin).mockResolvedValue(ADMIN);
 }
 
@@ -74,7 +74,7 @@ describe("GET /api/products/:id", () => {
     const response = await GET(new Request(BASE_URL), makeContext());
 
     expect(response.status).toBe(200);
-    expect(requireUser).toHaveBeenCalledTimes(1);
+    expect(getOptionalUser).toHaveBeenCalledTimes(1);
     expect(getProduct).toHaveBeenCalledWith(ID);
 
     const json = (await response.json()) as { data: unknown };
@@ -83,7 +83,7 @@ describe("GET /api/products/:id", () => {
   });
 
   it("permite el acceso a un administrador autenticado", async () => {
-    vi.mocked(requireUser).mockResolvedValue(ADMIN);
+    vi.mocked(getOptionalUser).mockResolvedValue(ADMIN);
     vi.mocked(getProduct).mockResolvedValue({ _id: ID } as unknown as Product);
 
     const response = await GET(new Request(BASE_URL), makeContext());
@@ -92,15 +92,20 @@ describe("GET /api/products/:id", () => {
     expect(getProduct).toHaveBeenCalledWith(ID);
   });
 
-  it("devuelve 401 sin autenticación sin consultar la lib", async () => {
-    vi.mocked(requireUser).mockRejectedValue(
-      new AuthenticationRequiredError(),
-    );
+  it("devuelve 200 a un visitante sin autenticación y consulta la lib", async () => {
+    const product = { _id: ID } as unknown as Product;
+    vi.mocked(getOptionalUser).mockResolvedValue(null);
+    vi.mocked(getProduct).mockResolvedValue(product);
 
     const response = await GET(new Request(BASE_URL), makeContext());
 
-    expect(response.status).toBe(401);
-    expect(getProduct).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(getOptionalUser).toHaveBeenCalledTimes(1);
+    expect(getProduct).toHaveBeenCalledWith(ID);
+
+    const json = (await response.json()) as { data: unknown };
+
+    expect(json).toEqual({ data: product });
   });
 
   it("devuelve 400 cuando el ID es inválido", async () => {

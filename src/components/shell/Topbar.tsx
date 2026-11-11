@@ -1,10 +1,12 @@
 "use client";
 
 import type { Ref } from "react";
-import { useRouter } from "next/navigation";
-import { LogOut, Menu } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Eye, LogOut, Menu } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { LinkButton } from "@/components/ui/LinkButton";
 import { ApiError } from "@/lib/api";
+import { buildLoginPath } from "@/lib/auth/redirect";
 import { cn } from "@/lib/cn";
 import { useLogout, useMe } from "@/lib/queries";
 import { notifyError } from "@/lib/sweetAlert";
@@ -17,6 +19,7 @@ type TopbarProps = {
 
 export function Topbar({ onOpenMenu, menuRef, menuOpen }: TopbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: user, isLoading } = useMe();
   const logoutMutation = useLogout();
 
@@ -80,7 +83,18 @@ export function Topbar({ onOpenMenu, menuRef, menuOpen }: TopbarProps) {
               disabled={logoutMutation.isPending}
             />
           </div>
-        ) : null}
+        ) : (
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-pill border border-border-strong bg-surface px-2.5 text-label-sm font-semibold whitespace-nowrap text-text-secondary">
+              <Eye aria-hidden="true" size={12} />
+              Modo visitante
+            </span>
+
+            <LinkButton href={buildLoginPath(pathname)} variant="secondary">
+              Iniciar sesión
+            </LinkButton>
+          </div>
+        )}
       </div>
     </header>
   );

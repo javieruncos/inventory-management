@@ -22,7 +22,12 @@ vi.mock("sweetalert2", () => ({
   default: { fire: mocks.fire, mixin: mocks.mixin, isLoading: () => false },
 }));
 
-import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
+import {
+  confirmDelete,
+  notifyError,
+  notifySuccess,
+  promptLogin,
+} from "@/lib/sweetAlert";
 
 type FireOptions = {
   toast?: boolean;
@@ -35,6 +40,7 @@ type FireOptions = {
   allowOutsideClick?: boolean;
   icon?: string;
   title?: string;
+  text?: string;
   confirmButtonText?: string;
   cancelButtonText?: string;
   buttonsStyling?: boolean;
@@ -129,6 +135,52 @@ describe("notifyError", () => {
 
     const serialized = JSON.stringify(options);
     expect(serialized).not.toMatch(/cause|stack|mongodb:\/\//i);
+  });
+});
+
+describe("promptLogin", () => {
+  beforeEach(() => {
+    mocks.fire.mockReset();
+  });
+
+  it("devuelve true y prioriza la acción de iniciar sesión", async () => {
+    mocks.fire.mockResolvedValue({ isConfirmed: true, isDismissed: false });
+
+    await expect(promptLogin()).resolves.toBe(true);
+
+    expect(firstFireOptions()).toMatchObject({
+      icon: "info",
+      title: "Iniciá sesión para continuar",
+      text: "El modo visitante es solo lectura. Iniciá sesión para registrar movimientos o modificar el inventario.",
+      showCancelButton: true,
+      confirmButtonText: "Iniciar sesión",
+      cancelButtonText: "Seguir explorando",
+      focusCancel: false,
+    });
+  });
+
+  it("devuelve false si el visitante decide seguir explorando", async () => {
+    mocks.fire.mockResolvedValue({ isConfirmed: false, isDismissed: true });
+
+    await expect(promptLogin()).resolves.toBe(false);
+  });
+
+  it("permite personalizar los textos del aviso", async () => {
+    mocks.fire.mockResolvedValue({ isConfirmed: false, isDismissed: true });
+
+    await promptLogin({
+      title: "Título personalizado",
+      text: "Texto personalizado",
+      confirmText: "Ingresar",
+      cancelText: "Volver",
+    });
+
+    expect(firstFireOptions()).toMatchObject({
+      title: "Título personalizado",
+      text: "Texto personalizado",
+      confirmButtonText: "Ingresar",
+      cancelButtonText: "Volver",
+    });
   });
 });
 

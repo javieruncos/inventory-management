@@ -7,6 +7,7 @@ import { StockMovementsList } from "@/components/stock/StockMovementsList";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
+import { useActionGuard } from "@/lib/auth/useActionGuard";
 import { cn } from "@/lib/cn";
 import { filterMovements, type MovementFilter } from "@/lib/dashboard";
 import { toViewStatus, useMovements } from "@/lib/queries";
@@ -50,14 +51,19 @@ function StockMovementsSkeleton() {
 
 export function StockMovementsView() {
   const movementsQuery = useMovements();
+  const { guard } = useActionGuard();
   const status = toViewStatus(movementsQuery);
   const [filter, setFilter] = useState<MovementFilter>("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const triggerRef = useRef<HTMLElement | null>(null);
 
   const openDialog = (event: MouseEvent<HTMLButtonElement>) => {
-    triggerRef.current = event.currentTarget;
-    setDialogOpen(true);
+    const trigger = event.currentTarget;
+
+    void guard(() => {
+      triggerRef.current = trigger;
+      setDialogOpen(true);
+    });
   };
 
   const closeDialog = () => {

@@ -69,6 +69,18 @@ export async function requireUser(): Promise<AuthenticatedUser> {
   }
 }
 
+export async function getOptionalUser(): Promise<AuthenticatedUser | null> {
+  try {
+    return await requireUser();
+  } catch (error) {
+    if (error instanceof AuthenticationRequiredError) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function requireAdmin(): Promise<AdminUser> {
   const user = await requireUser();
 

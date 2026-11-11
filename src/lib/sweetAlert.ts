@@ -94,6 +94,32 @@ export async function confirmDelete({
   return { status: "confirmed" };
 }
 
+export type PromptLoginOptions = {
+  title?: string;
+  text?: string;
+  confirmText?: string;
+  cancelText?: string;
+};
+
+export async function promptLogin({
+  title = "Iniciá sesión para continuar",
+  text = "El modo visitante es solo lectura. Iniciá sesión para registrar movimientos o modificar el inventario.",
+  confirmText = "Iniciar sesión",
+  cancelText = "Seguir explorando",
+}: PromptLoginOptions = {}): Promise<boolean> {
+  const result = await swal.fire({
+    icon: "info",
+    title,
+    text,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    focusCancel: false,
+  });
+
+  return result.isConfirmed;
+}
+
 export async function notifySuccess(message: string): Promise<void> {
   await toast.fire({ icon: "success", title: message });
 }

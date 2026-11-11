@@ -15,6 +15,7 @@ import {
 import { LoginBrandPanel } from "@/components/auth/LoginBrandPanel";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
+import { getSafeNextPath } from "@/lib/auth/redirect";
 import {
   submitLoginForm,
   type LoginFormValues,
@@ -44,7 +45,8 @@ export default function LoginPage() {
     await submitLoginForm(values, {
       loginFn: (input) => loginMutation.mutateAsync(input),
       onSuccess: () => {
-        router.replace("/");
+        const params = new URLSearchParams(window.location.search);
+        router.replace(getSafeNextPath(params.get("next")));
       },
       onGeneralError: (message) => {
         setGeneralError(message);
