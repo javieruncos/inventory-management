@@ -7,16 +7,38 @@ import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { buildLoginPath } from "@/lib/auth/redirect";
 import { useCanManageUsers } from "@/lib/auth/useCanManageUsers";
+import { cn } from "@/lib/cn";
 import { useMe } from "@/lib/queries";
 
 type AdminGateProps = {
   children: ReactNode;
 };
 
+const pulseClass = "animate-pulse motion-reduce:animate-none bg-surface-nested";
+
+function AdminGateSkeleton() {
+  return (
+    <Card className="max-w-[560px]" aria-busy="true">
+      <span className="sr-only">Verificando permisos</span>
+      <div className="flex items-start gap-3" aria-hidden="true">
+        <span className={cn("size-9 shrink-0 rounded-control", pulseClass)} />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <span className={cn("h-5 w-48 max-w-full rounded-sm", pulseClass)} />
+          <span className={cn("h-4 w-72 max-w-full rounded-sm", pulseClass)} />
+        </div>
+      </div>
+      <span
+        aria-hidden="true"
+        className={cn("mt-5 block h-9 w-32 rounded-control", pulseClass)}
+      />
+    </Card>
+  );
+}
+
 export function AdminGate({ children }: AdminGateProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: user } = useMe();
+  const { data: user, isLoading } = useMe();
   const canManageUsers = useCanManageUsers();
 
   useEffect(() => {
@@ -25,7 +47,9 @@ export function AdminGate({ children }: AdminGateProps) {
     }
   }, [pathname, router, user]);
 
-  if (!user) return null;
+  if (!user) {
+    return isLoading ? <AdminGateSkeleton /> : null;
+  }
 
   if (!canManageUsers) {
     return (

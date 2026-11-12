@@ -154,6 +154,10 @@ export function CategoriesView() {
     void categoriesQuery.refetch();
   };
 
+  const retryProductCounts = () => {
+    void productsQuery.refetch();
+  };
+
   const categories = categoriesQuery.data ?? [];
 
   let body: ReactNode;
@@ -184,14 +188,29 @@ export function CategoriesView() {
     );
   } else {
     body = (
-      <CategoriesList
-        categories={categories}
-        totalCategories={categories.length}
-        productCounts={productCounts}
-        canManage={canManage}
-        onEdit={openEdit}
-        onDelete={handleDelete}
-      />
+      <>
+        {productsQuery.isError ? (
+          <div
+            role="alert"
+            className="flex flex-col items-start gap-3 rounded-card border border-border bg-surface p-5 shadow-card"
+          >
+            <p className="text-body text-text-secondary">
+              No se pudieron cargar los conteos de productos.
+            </p>
+            <Button variant="secondary" onClick={retryProductCounts}>
+              Reintentar
+            </Button>
+          </div>
+        ) : null}
+        <CategoriesList
+          categories={categories}
+          totalCategories={categories.length}
+          productCounts={productCounts}
+          canManage={canManage}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+        />
+      </>
     );
   }
 

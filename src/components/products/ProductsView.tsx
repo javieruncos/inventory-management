@@ -142,7 +142,7 @@ export function ProductsView() {
   let body: ReactNode;
 
   if (status === "loading") {
-    body = <ProductsSkeleton />;
+    body = <ProductsSkeleton canManage={canManage} />;
   } else if (status === "error") {
     body = (
       <div

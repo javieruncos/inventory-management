@@ -4,13 +4,10 @@ import type {
   StockMovementWithProductDTO,
 } from "@/types/stockMovement";
 
-//TYPES
 export type StockStatus = "outOfStock" | "lowStock" | "normal";
 
-//FILTROS
 export type MovementFilter = "ALL" | "IN" | "OUT";
 
-//ESTRUCTURA DE DATOS
 export type InventorySummary = {
   totalProducts: number;
   totalUnits: number;
@@ -24,22 +21,18 @@ export type LowStockAlerts = {
   hasMore: boolean;
 };
 
-//ESTRUCTURA DE MOVIMIENTOS CON PRODUCTO
 export type MovementWithProduct = StockMovementWithProductDTO;
 
-//CONSTANTES POR DEFECTO PARA EL LLIMIT DE MOVIMIENTOS RECIENTES
 export const DEFAULT_RECENT_MOVEMENTS_LIMIT = 6;
 
 export const DEFAULT_LOW_STOCK_LIMIT = 6;
 
-// PRIORIDAD DE ESTADO DE STOCK
 const STATUS_PRIORITY: Record<StockStatus, number> = {
   outOfStock: 0,
   lowStock: 1,
   normal: 2,
 };
 
-//OBTENER ESTADO DEL STOCK
 export function getStockStatus(
   product: Pick<ProductDTO, "currentStock" | "minimumStock">,
 ): StockStatus {
@@ -54,11 +47,10 @@ export function getStockStatus(
   return "normal";
 }
 
-//FUNCION PRINCIPAL QUE PERMITIRÁ SUMARIZAR EL INVENTARIO
 export function summarizeInventory(products: ProductDTO[]): InventorySummary {
   let totalUnits = 0;
   let lowStockCount = 0;
-  let outOfStockCount = 0;  
+  let outOfStockCount = 0;
 
   for (const product of products) {
     totalUnits += product.currentStock;
@@ -80,7 +72,6 @@ export function summarizeInventory(products: ProductDTO[]): InventorySummary {
   };
 }
 
-//ORDENAR POR NIVEL DE STOCK ASCENDENTE Y POR CANTIDAD RESTANTE ASCENDENTE
 export function sortByCriticality(products: ProductDTO[]): ProductDTO[] {
   return [...products].sort((a, b) => {
     const statusDiff =
@@ -115,7 +106,6 @@ export function getLowStockAlerts(
   };
 }
 
-//OBTENER MOVIMIENTOS RECIENTES Y ORDENADOS POR FECHA DESCENDENTE
 export function getRecentMovements(
   movements: StockMovementWithProductDTO[],
   options?: { limit?: number },
@@ -132,7 +122,6 @@ export function getRecentMovements(
   return sorted.slice(0, limit);
 }
 
-//FILTRAR MOVIMIENTOS POR TIPO
 export function filterMovements<T extends StockMovementDTO>(
   movements: T[],
   filter: MovementFilter,
@@ -144,7 +133,6 @@ export function filterMovements<T extends StockMovementDTO>(
   return movements.filter((movement) => movement.type === filter);
 }
 
-//TEXTO DEL CONTADOR DE MOVIMIENTOS VISIBLES SOBRE EL TOTAL FILTRADO
 export function recentMovementsCountLabel(
   visible: number,
   total: number,
