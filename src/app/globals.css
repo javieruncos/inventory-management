@@ -1,6 +1,278 @@
 @import "tailwindcss";
+@import "sweetalert2/dist/sweetalert2.min.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens — fuente: DESIGN.md
+ * Spacing (DESIGN.md §8): escala por defecto de Tailwind (1=4px, 2=8px, 4=16px,
+ * 6=24px, 8=32px) + gutter 20px (= gap-5 / p-5) + margen desktop 32px (= p-8)
+ * + margen mobile 16px (= p-4).
+ */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans:
+    var(--font-plus-jakarta-sans), system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --color-canvas: #f6f8fc;
+  --color-surface: #ffffff;
+  --color-surface-nested: #f8fafc;
+  --color-surface-shell: #fafbfe;
+  --color-border: #eef1f6;
+  --color-border-strong: #e2e8f0;
+  --color-divider: #f1f5f9;
+
+  --color-primary: #5b5fc7;
+  --color-primary-alt: #4f46e5;
+  --color-primary-soft: #eef2ff;
+  --color-secondary: #6366f1;
+  --color-success: #10b981;
+  --color-neutral: #64748b;
+
+  --color-text: #0b1c30;
+  --color-text-secondary: #64748b;
+  --color-text-subtitle: #5e6f87;
+  --color-text-muted: #94a3b8;
+  --color-secondary-btn-text: #334155;
+
+  /* Fondos y dots = §5.2 sin cambios. Textos oscurecidos un paso dentro de la
+   * misma familia de tono para cumplir contraste WCAG AA >= 4.5:1 (DESIGN §20). */
+  --color-status-in-bg: #ecfdf5;
+  --color-status-in-text: #047857;
+  --color-status-in-dot: #10b981;
+
+  --color-status-low-bg: #fffbeb;
+  --color-status-low-text: #b45309;
+  --color-status-low-dot: #f59e0b;
+
+  --color-status-out-bg: #fef2f2;
+  --color-status-out-text: #b91c1c;
+  --color-status-out-dot: #ef4444;
+
+  --color-status-archived-bg: #f1f5f9;
+  --color-status-archived-text: #475569;
+  --color-status-archived-dot: #94a3b8;
+
+  --radius-sm: 4px;
+  --radius-control: 10px;
+  --radius-nested: 12px;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  --shadow-card:
+    0 4px 20px -2px rgb(99 102 241 / 0.03),
+    0 2px 6px -1px rgb(15 23 42 / 0.04);
+  --shadow-popover:
+    0 10px 25px -5px rgb(15 23 42 / 0.08),
+    0 4px 10px -2px rgb(15 23 42 / 0.03);
+  --shadow-dialog: 0 25px 50px -12px rgb(15 23 42 / 0.15);
+
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+
+  --text-heading-lg: 24px;
+  --text-heading-lg--line-height: 32px;
+  --text-heading-lg--font-weight: 600;
+  --text-heading-lg--letter-spacing: -0.015em;
+
+  --text-heading-md: 20px;
+  --text-heading-md--line-height: 28px;
+  --text-heading-md--font-weight: 600;
+  --text-heading-md--letter-spacing: -0.01em;
+
+  --text-heading-sm: 16px;
+  --text-heading-sm--line-height: 24px;
+  --text-heading-sm--font-weight: 600;
+
+  --text-stat: 24px;
+  --text-stat--line-height: 32px;
+  --text-stat--font-weight: 700;
+  --text-stat--letter-spacing: -0.02em;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-label--font-weight: 600;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--font-weight: 600;
+  --text-label-sm--letter-spacing: 0.02em;
+
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --breakpoint-desktop: 1200px;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-canvas text-text;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-primary outline-offset-2;
+  }
+
+  ::selection {
+    @apply bg-primary-soft text-text;
+  }
+}
+
+/*
+ * Login-only dark theme.
+ * Deliberate localized exception to the light Dashboard identity.
+ * Source of truth: src/assets/reference/design-login.md.
+ */
+.login-theme {
+  color-scheme: dark;
+  --login-brand-bg: #082c2b;
+  --login-brand-deep: #061f20;
+  --login-brand-ink: #041718;
+  --login-brand-surface: #12312f;
+  --login-bg: #101719;
+  --login-bg-deep: #0c1315;
+  --login-surface: #172224;
+  --login-surface-raised: #1a2a2c;
+  --login-border: #263a3c;
+  --login-border-strong: #34504d;
+  --login-border-input: #5a7c75;
+  --login-text: #d7e2df;
+  --login-text-strong: #f1f5f4;
+  --login-text-muted: #a0b2af;
+  --login-text-subtle: #8fa6a1;
+  --login-primary: #35b6a0;
+  --login-primary-hover: #45c4b0;
+  --login-on-primary: #061f20;
+  --login-accent-text: #35b6a0;
+  --login-focus: #35b6a0;
+  --login-error: #fca5a5;
+  --login-error-bg: #3a1d20;
+  --login-error-border: #f87171;
+}
+
+.login-brand-panel {
+  background:
+    radial-gradient(
+      ellipse at 18% 18%,
+      rgb(53 182 160 / 0.14),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 82% 88%,
+      rgb(53 182 160 / 0.08),
+      transparent 50%
+    ),
+    linear-gradient(
+      145deg,
+      var(--login-brand-bg) 0%,
+      var(--login-brand-deep) 58%,
+      var(--login-brand-ink) 100%
+    );
+}
+
+/*
+ * Right form panel: light surface inside the login-only dark shell.
+ * The left brand panel and AuthGate keep the dark tokens.
+ */
+.login-form-panel {
+  color-scheme: light;
+  color: var(--login-text);
+  --login-surface: #f8fafc;
+  --login-border: #e5e7eb;
+  --login-border-strong: #cbd5e1;
+  --login-border-input: #7a8aa3;
+  --login-text: #334155;
+  --login-text-strong: #0b1c30;
+  --login-text-muted: #5e6f87;
+  --login-text-subtle: #64748b;
+  --login-accent-text: #0f766e;
+  --login-focus: #0f766e;
+  --login-error: #b91c1c;
+  --login-error-bg: #fef2f2;
+  --login-error-border: #ef4444;
+  background: #ffffff;
+}
+
+.login-brand-surface {
+  background: linear-gradient(
+    180deg,
+    var(--login-brand-surface) 0%,
+    var(--login-brand-deep) 100%
+  );
+  box-shadow: inset 0 1px 0 rgb(241 245 244 / 0.06);
+}
+
+.login-theme ::selection {
+  background: rgb(53 182 160 / 0.28);
+  color: var(--login-text-strong);
+}
+
+.login-theme :focus-visible {
+  outline-color: var(--login-focus);
+}
+
+.login-form-panel button:focus-visible {
+  outline-color: var(--login-focus);
+}
+
+.login-theme input:-webkit-autofill,
+.login-theme input:-webkit-autofill:hover,
+.login-theme input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--login-text-strong);
+  -webkit-box-shadow: 0 0 0 1000px var(--login-surface) inset;
+  caret-color: var(--login-text-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * SweetAlert2 — ajuste de precedencia.
+ * El CSS de SweetAlert2 se importa sin capa y sus selectores usan :where(),
+ * por lo que sobreescriben a las utilidades de Tailwind (que viven en
+ * @layer utilities). Estas reglas, también sin capa y con selectores de clase,
+ * ganan por especificidad y reutilizan los mismos tokens del design system
+ * (vía @apply) sin introducir colores, radios, sombras ni z-index nuevos.
+ * Solo afectan a elementos internos de SweetAlert2.
+ */
+.swal2-popup {
+  @apply rounded-card border border-border bg-surface font-sans text-text shadow-dialog;
+}
+
+.swal2-title {
+  @apply text-heading-sm text-text;
+}
+
+.swal2-html-container {
+  @apply text-body text-text-secondary;
+}
+
+.swal2-actions {
+  @apply justify-end gap-3;
 }

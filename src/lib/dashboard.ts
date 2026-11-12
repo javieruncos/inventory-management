@@ -1,0 +1,143 @@
+import type { ProductDTO } from "@/types/product";
+import type {
+  StockMovementDTO,
+  StockMovementWithProductDTO,
+} from "@/types/stockMovement";
+
+export type StockStatus = "outOfStock" | "lowStock" | "normal";
+
+export type MovementFilter = "ALL" | "IN" | "OUT";
+
+export type InventorySummary = {
+  totalProducts: number;
+  totalUnits: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+};
+
+export type LowStockAlerts = {
+  alerts: ProductDTO[];
+  total: number;
+  hasMore: boolean;
+};
+
+export type MovementWithProduct = StockMovementWithProductDTO;
+
+export const DEFAULT_RECENT_MOVEMENTS_LIMIT = 6;
+
+export const DEFAULT_LOW_STOCK_LIMIT = 6;
+
+const STATUS_PRIORITY: Record<StockStatus, number> = {
+  outOfStock: 0,
+  lowStock: 1,
+  normal: 2,
+};
+
+export function getStockStatus(
+  product: Pick<ProductDTO, "currentStock" | "minimumStock">,
+): StockStatus {
+  if (product.currentStock === 0) {
+    return "outOfStock";
+  }
+
+  if (product.minimumStock > 0 && product.currentStock <= product.minimumStock) {
+    return "lowStock";
+  }
+
+  return "normal";
+}
+
+export function summarizeInventory(products: ProductDTO[]): InventorySummary {
+  let totalUnits = 0;
+  let lowStockCount = 0;
+  let outOfStockCount = 0;
+
+  for (const product of products) {
+    totalUnits += product.currentStock;
+
+    const status = getStockStatus(product);
+
+    if (status === "lowStock") {
+      lowStockCount += 1;
+    } else if (status === "outOfStock") {
+      outOfStockCount += 1;
+    }
+  }
+
+  return {
+    totalProducts: products.length,
+    totalUnits,
+    lowStockCount,
+    outOfStockCount,
+  };
+}
+
+export function sortByCriticality(products: ProductDTO[]): ProductDTO[] {
+  return [...products].sort((a, b) => {
+    const statusDiff =
+      STATUS_PRIORITY[getStockStatus(a)] - STATUS_PRIORITY[getStockStatus(b)];
+
+    if (statusDiff !== 0) {
+      return statusDiff;
+    }
+
+    return (
+      a.currentStock -
+      a.minimumStock -
+      (b.currentStock - b.minimumStock)
+    );
+  });
+}
+
+export function getLowStockAlerts(
+  products: ProductDTO[],
+  options?: { limit?: number },
+): LowStockAlerts {
+  const sorted = sortByCriticality(
+    products.filter((product) => getStockStatus(product) !== "normal"),
+  );
+  const limit = Math.max(0, options?.limit ?? DEFAULT_LOW_STOCK_LIMIT);
+  const alerts = sorted.slice(0, limit);
+
+  return {
+    alerts,
+    total: sorted.length,
+    hasMore: sorted.length > alerts.length,
+  };
+}
+
+export function getRecentMovements(
+  movements: StockMovementWithProductDTO[],
+  options?: { limit?: number },
+): MovementWithProduct[] {
+  const limit = Math.max(
+    0,
+    options?.limit ?? DEFAULT_RECENT_MOVEMENTS_LIMIT,
+  );
+
+  const sorted = [...movements].sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+  );
+
+  return sorted.slice(0, limit);
+}
+
+export function filterMovements<T extends StockMovementDTO>(
+  movements: T[],
+  filter: MovementFilter,
+): T[] {
+  if (filter === "ALL") {
+    return [...movements];
+  }
+
+  return movements.filter((movement) => movement.type === filter);
+}
+
+export function recentMovementsCountLabel(
+  visible: number,
+  total: number,
+): string {
+  return `Mostrando ${visible} de ${total} ${
+    total === 1 ? "movimiento" : "movimientos"
+  }`;
+}
