@@ -1,22 +1,16 @@
+import { CategoryCard } from "@/components/categories/CategoryCard";
 import type { CategoryDTO } from "@/types/category";
-import { Pencil, Trash } from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { IconButton } from "@/components/ui/IconButton";
 
 type CategoriesListProps = {
   categories: CategoryDTO[];
   totalCategories: number;
+  productCounts: ReadonlyMap<string, number> | null;
   canManage: boolean;
   /** Abre el diálogo de edición; el segundo argumento es el botón disparador (para restaurar el foco al cerrar). */
   onEdit: (category: CategoryDTO, trigger: HTMLElement) => void;
   /** Abre el diálogo de confirmación de eliminación; el segundo argumento es el botón disparador. */
   onDelete: (category: CategoryDTO, trigger: HTMLElement) => void;
 };
-
-function descriptionOf(category: CategoryDTO): string {
-  const description = category.description?.trim();
-  return description ? description : "Sin descripción";
-}
 
 function countLabel(shown: number, total: number): string {
   if (shown === total) {
@@ -30,100 +24,25 @@ function countLabel(shown: number, total: number): string {
 export function CategoriesList({
   categories,
   totalCategories,
+  productCounts,
   canManage,
   onEdit,
   onDelete,
 }: CategoriesListProps) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="hidden desktop:block">
-        <table className="w-full border-collapse text-body">
-          <caption className="sr-only">
-            Listado de categorías con nombre y descripción.
-          </caption>
-          <thead>
-            <tr className="bg-surface-nested text-label-sm uppercase text-text-secondary">
-              <th scope="col" className="py-3 pl-0 pr-4 text-left">
-                Nombre
-              </th>
-              {canManage ? (
-                <th scope="col" className="py-3 pl-4 pr-0 text-right">
-                  Acciones
-                </th>
-              ) : null}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-divider">
-            {categories.map((category) => (
-              <tr
-                key={category._id}
-                className="transition-colors hover:bg-surface-nested"
-              >
-                <td className="py-3 pl-0 pr-4 align-middle">
-                  <span className="block truncate font-medium text-text">
-                    {category.name}
-                  </span>
-                  <span className="block truncate text-caption text-text-secondary">
-                    {descriptionOf(category)}
-                  </span>
-                </td>
-                {canManage ? (
-                  <td className="py-3 pl-4 pr-0 text-right align-middle">
-                    <div className="flex items-center justify-end gap-2">
-                      <IconButton
-                        label={`Editar ${category.name}`}
-                        icon={<Pencil size={16} />}
-                        onClick={(event) =>
-                          onEdit(category, event.currentTarget)
-                        }
-                      />
-                      <IconButton
-                        label={`Eliminar ${category.name}`}
-                        icon={<Trash size={16} />}
-                        onClick={(event) =>
-                          onDelete(category, event.currentTarget)
-                        }
-                      />
-                    </div>
-                  </td>
-                ) : null}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <ul className="flex flex-col gap-4 desktop:hidden">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => (
-          <li key={category._id}>
-            <Card>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-body font-medium text-text">
-                    {category.name}
-                  </p>
-                  <p className="truncate text-caption text-text-secondary">
-                    {descriptionOf(category)}
-                  </p>
-                </div>
-                {canManage ? (
-                  <div className="flex shrink-0 items-center gap-2">
-                    <IconButton
-                      label={`Editar ${category.name}`}
-                      icon={<Pencil size={16} />}
-                      onClick={(event) => onEdit(category, event.currentTarget)}
-                    />
-                    <IconButton
-                      label={`Eliminar ${category.name}`}
-                      icon={<Trash size={16} />}
-                      onClick={(event) =>
-                        onDelete(category, event.currentTarget)
-                      }
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </Card>
+          <li key={category._id} className="h-full">
+            <CategoryCard
+              category={category}
+              productCount={
+                productCounts ? (productCounts.get(category._id) ?? 0) : null
+              }
+              canManage={canManage}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
           </li>
         ))}
       </ul>

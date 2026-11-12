@@ -24,27 +24,63 @@ const FILTERS: ReadonlyArray<{ value: MovementFilter; label: string }> = [
 function StockMovementsSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-hidden="true">
-      {Array.from({ length: 5 }, (_, index) => (
-        <div
-          key={index}
-          className="rounded-card border border-border bg-surface p-5 shadow-card"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <span className="flex min-w-0 flex-1 items-center gap-3">
-              <span className={cn("size-8 shrink-0 rounded-control", pulseClass)} />
-              <span className="flex min-w-0 flex-1 flex-col gap-2">
-                <span
-                  className={cn("h-4 w-48 max-w-full rounded-sm", pulseClass)}
-                />
+      <div className="hidden desktop:block">
+        <div className="flex items-center gap-6 bg-surface-nested py-3">
+          <span className={cn("h-3 w-20 rounded-sm", pulseClass)} />
+          <span className={cn("h-3 w-16 rounded-sm", pulseClass)} />
+          <span className={cn("h-3 w-20 rounded-sm", pulseClass)} />
+          <span className={cn("h-3 w-40 rounded-sm", pulseClass)} />
+          <span className={cn("ml-auto h-3 w-24 rounded-sm", pulseClass)} />
+        </div>
+        <div>
+          {Array.from({ length: 5 }, (_, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-6 border-b border-divider py-3"
+            >
+              <span
+                className={cn("h-4 w-48 max-w-full rounded-sm", pulseClass)}
+              />
+              <span className="flex items-center gap-2">
+                <span className={cn("size-8 rounded-control", pulseClass)} />
+                <span className={cn("h-4 w-16 rounded-sm", pulseClass)} />
+              </span>
+              <span className={cn("h-6 w-20 rounded-pill", pulseClass)} />
+              <span className={cn("h-4 w-56 max-w-full rounded-sm", pulseClass)} />
+              <span className={cn("ml-auto h-4 w-24 rounded-sm", pulseClass)} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <ul className="flex flex-col gap-4 desktop:hidden">
+        {Array.from({ length: 5 }, (_, index) => (
+          <li
+            key={index}
+            className="rounded-card border border-border bg-surface p-5 shadow-card"
+          >
+            <div className="flex items-start gap-3">
+              <span
+                className={cn("size-8 shrink-0 rounded-control", pulseClass)}
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="flex items-start justify-between gap-3">
+                  <span
+                    className={cn("h-4 w-40 max-w-full rounded-sm", pulseClass)}
+                  />
+                  <span
+                    className={cn("h-6 w-16 shrink-0 rounded-pill", pulseClass)}
+                  />
+                </div>
                 <span
                   className={cn("h-3 w-64 max-w-full rounded-sm", pulseClass)}
                 />
-              </span>
-            </span>
-            <span className={cn("h-6 w-16 shrink-0 rounded-pill", pulseClass)} />
-          </div>
-        </div>
-      ))}
+                <span className={cn("h-3 w-24 rounded-sm", pulseClass)} />
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

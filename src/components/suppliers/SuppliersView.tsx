@@ -44,29 +44,67 @@ function deleteErrorMessage(error: unknown): string {
 function SuppliersSkeleton({ canManage }: { canManage: boolean }) {
   return (
     <div className="flex flex-col gap-4" aria-hidden="true">
-      {Array.from({ length: 4 }, (_, index) => (
-        <div
-          key={index}
-          className="rounded-card border border-border bg-surface p-5 shadow-card"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <span className="flex min-w-0 flex-1 flex-col gap-2">
-              <span
-                className={cn("h-4 w-48 max-w-full rounded-sm", pulseClass)}
-              />
-              <span
-                className={cn("h-3 w-64 max-w-full rounded-sm", pulseClass)}
-              />
-            </span>
-            {canManage ? (
-              <span className="flex shrink-0 items-center gap-2">
-                <span className={cn("size-8 rounded-control", pulseClass)} />
-                <span className={cn("size-8 rounded-control", pulseClass)} />
-              </span>
-            ) : null}
-          </div>
+      <div className="hidden desktop:block">
+        <div className="flex items-center gap-6 bg-surface-nested py-3">
+          <span className={cn("h-3 w-20 rounded-sm", pulseClass)} />
+          <span className={cn("ml-auto h-3 w-48 rounded-sm", pulseClass)} />
+          <span className={cn("h-3 w-32 rounded-sm", pulseClass)} />
+          {canManage ? (
+            <span className={cn("h-3 w-16 rounded-sm", pulseClass)} />
+          ) : null}
         </div>
-      ))}
+        <div>
+          {Array.from({ length: 4 }, (_, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-6 border-b border-divider py-3"
+            >
+              <span
+                className={cn("h-4 w-44 max-w-full rounded-sm", pulseClass)}
+              />
+              <span className="ml-auto flex flex-1 justify-end">
+                <span className={cn("h-4 w-48 rounded-sm", pulseClass)} />
+              </span>
+              <span className={cn("h-4 w-32 rounded-sm", pulseClass)} />
+              {canManage ? (
+                <span className="flex w-16 justify-end gap-2">
+                  <span className={cn("size-8 rounded-control", pulseClass)} />
+                  <span className={cn("size-8 rounded-control", pulseClass)} />
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <ul className="flex flex-col gap-4 desktop:hidden">
+        {Array.from({ length: 4 }, (_, index) => (
+          <li
+            key={index}
+            className="rounded-card border border-border bg-surface p-5 shadow-card"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className="flex min-w-0 flex-1 flex-col gap-2">
+                <span
+                  className={cn("h-4 w-48 max-w-full rounded-sm", pulseClass)}
+                />
+                <span
+                  className={cn("h-3 w-64 max-w-full rounded-sm", pulseClass)}
+                />
+                <span
+                  className={cn("h-3 w-36 max-w-full rounded-sm", pulseClass)}
+                />
+              </span>
+              {canManage ? (
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className={cn("size-8 rounded-control", pulseClass)} />
+                  <span className={cn("size-8 rounded-control", pulseClass)} />
+                </span>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
