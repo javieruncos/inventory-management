@@ -16,13 +16,57 @@ import { Card } from "@/components/ui/Card";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, type StatCardProps } from "@/components/ui/StatCard";
 import { ApiError } from "@/lib/api";
 import { useActionGuard } from "@/lib/auth/useActionGuard";
 import { summarizeInventory } from "@/lib/dashboard";
 import { toViewStatus, useMovements, useProducts } from "@/lib/queries";
 
 const numberFormat = new Intl.NumberFormat("es");
+
+type KpiVariant = "total" | "inStock" | "lowStock" | "outOfStock";
+
+type KpiVariantClasses = {
+  card: string;
+  tint: string;
+  bar: string;
+  icon: string;
+};
+
+const KPI_VARIANTS: Record<KpiVariant, KpiVariantClasses> = {
+  total: {
+    card: "ring-1 ring-inset ring-indigo-500/20 dark:ring-indigo-400/25",
+    tint: "bg-indigo-500/[0.06] dark:bg-indigo-400/[0.08]",
+    bar: "bg-indigo-500/70 dark:bg-indigo-400/70",
+    icon: "bg-indigo-500/10 text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-400/10 dark:text-indigo-300 dark:ring-indigo-400/25",
+  },
+  inStock: {
+    card: "ring-1 ring-inset ring-emerald-500/20 dark:ring-emerald-400/25",
+    tint: "bg-emerald-500/[0.06] dark:bg-emerald-400/[0.08]",
+    bar: "bg-emerald-500/70 dark:bg-emerald-400/70",
+    icon: "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/25",
+  },
+  lowStock: {
+    card: "ring-1 ring-inset ring-amber-500/25 dark:ring-amber-400/25",
+    tint: "bg-amber-500/[0.06] dark:bg-amber-400/[0.08]",
+    bar: "bg-amber-500/70 dark:bg-amber-400/70",
+    icon: "bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/25",
+  },
+  outOfStock: {
+    card: "ring-1 ring-inset ring-rose-500/20 dark:ring-rose-400/25",
+    tint: "bg-rose-500/[0.06] dark:bg-rose-400/[0.08]",
+    bar: "bg-rose-500/70 dark:bg-rose-400/70",
+    icon: "bg-rose-500/10 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-400/10 dark:text-rose-300 dark:ring-rose-400/25",
+  },
+};
+
+type MetricCardProps = Omit<StatCardProps, "accent"> & {
+  variant: KpiVariant;
+};
+
+function MetricCard({ variant, ...props }: MetricCardProps) {
+  return <StatCard {...props} accent={KPI_VARIANTS[variant]} />;
+}
 
 function errorMessageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
@@ -129,25 +173,29 @@ export function Dashboard() {
                 : summary
                   ? (
                     <>
-                      <StatCard
+                      <MetricCard
+                        variant="total"
                         compactOnMobile
                         icon={<Package size={18} />}
                         label="Productos totales"
                         value={numberFormat.format(summary.totalProducts)}
                       />
-                      <StatCard
+                      <MetricCard
+                        variant="inStock"
                         compactOnMobile
                         icon={<Layers size={18} />}
                         label="Unidades en stock"
                         value={numberFormat.format(summary.totalUnits)}
                       />
-                      <StatCard
+                      <MetricCard
+                        variant="lowStock"
                         compactOnMobile
                         icon={<TriangleAlert size={18} />}
                         label="Stock bajo"
                         value={numberFormat.format(summary.lowStockCount)}
                       />
-                      <StatCard
+                      <MetricCard
+                        variant="outOfStock"
                         compactOnMobile
                         icon={<ArchiveX size={18} />}
                         label="Stock agotado"

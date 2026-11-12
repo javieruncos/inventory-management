@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
+import { ProductsSkeleton } from "@/components/products/ProductsSkeleton";
 import { ProductsView } from "@/components/products/ProductsView";
 
 export const metadata: Metadata = {
@@ -6,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function ProductsPage() {
-  return <ProductsView />;
+  return (
+    <Suspense fallback={<ProductsSkeleton />}>
+      <ProductsView />
+    </Suspense>
+  );
 }

@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useMemo,
   useRef,
   useState,
   type MouseEvent,
@@ -19,6 +20,7 @@ import {
   toViewStatus,
   useCategories,
   useDeleteCategory,
+  useProducts,
 } from "@/lib/queries";
 import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { CategoryDTO } from "@/types/category";
@@ -43,27 +45,45 @@ function deleteErrorMessage(error: unknown): string {
 
 function CategoriesSkeleton({ canManage }: { canManage: boolean }) {
   return (
-    <div className="flex flex-col gap-4" aria-hidden="true">
+    <div
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      aria-hidden="true"
+    >
       {Array.from({ length: 4 }, (_, index) => (
         <div
           key={index}
-          className="rounded-card border border-border bg-surface p-5 shadow-card"
+          className="relative h-full rounded-card border border-border bg-surface p-5 shadow-card"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div
+            className={cn(
+              "flex items-start gap-3",
+              canManage && "pr-20",
+            )}
+          >
+            <span
+              className={cn("size-11 shrink-0 rounded-nested", pulseClass)}
+            />
             <span className="flex min-w-0 flex-1 flex-col gap-2">
               <span
-                className={cn("h-4 w-48 max-w-full rounded-sm", pulseClass)}
+                className={cn("h-4 w-40 max-w-full rounded-sm", pulseClass)}
               />
               <span
-                className={cn("h-3 w-64 max-w-full rounded-sm", pulseClass)}
+                className={cn("h-3 w-full max-w-full rounded-sm", pulseClass)}
+              />
+              <span
+                className={cn("h-3 w-2/3 max-w-full rounded-sm", pulseClass)}
               />
             </span>
-            {canManage ? (
-              <span className="flex shrink-0 items-center gap-2">
-                <span className={cn("size-8 rounded-control", pulseClass)} />
-                <span className={cn("size-8 rounded-control", pulseClass)} />
-              </span>
-            ) : null}
+          </div>
+          {canManage ? (
+            <span className="absolute right-5 top-5 flex shrink-0 items-center gap-2">
+              <span className={cn("size-8 rounded-control", pulseClass)} />
+              <span className={cn("size-8 rounded-control", pulseClass)} />
+            </span>
+          ) : null}
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-nested bg-surface-nested p-3">
+            <span className={cn("h-8 rounded-sm", pulseClass)} />
+            <span className={cn("h-8 rounded-sm", pulseClass)} />
           </div>
         </div>
       ))}
@@ -74,8 +94,21 @@ function CategoriesSkeleton({ canManage }: { canManage: boolean }) {
 export function CategoriesView() {
   const canManage = useCanManageCatalog();
   const categoriesQuery = useCategories();
+  const productsQuery = useProducts();
   const deleteMutation = useDeleteCategory();
   const status = toViewStatus(categoriesQuery);
+  const productCounts = useMemo(() => {
+    if (!productsQuery.data) return null;
+
+    const counts = new Map<string, number>();
+    for (const product of productsQuery.data) {
+      counts.set(
+        product.categoryId,
+        (counts.get(product.categoryId) ?? 0) + 1,
+      );
+    }
+    return counts;
+  }, [productsQuery.data]);
   const [dialog, setDialog] = useState<DialogState>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const listSectionRef = useRef<HTMLElement | null>(null);
@@ -154,6 +187,7 @@ export function CategoriesView() {
       <CategoriesList
         categories={categories}
         totalCategories={categories.length}
+        productCounts={productCounts}
         canManage={canManage}
         onEdit={openEdit}
         onDelete={handleDelete}

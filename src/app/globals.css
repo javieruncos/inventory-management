@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "sweetalert2/dist/sweetalert2.min.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Design tokens — fuente: DESIGN.md
  * Spacing (DESIGN.md §8): escala por defecto de Tailwind (1=4px, 2=8px, 4=16px,

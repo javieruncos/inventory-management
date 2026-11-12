@@ -7,7 +7,8 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { Plus } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { ProductsList } from "@/components/products/ProductsList";
 import { ProductsSkeleton } from "@/components/products/ProductsSkeleton";
@@ -18,7 +19,13 @@ import { ApiError } from "@/lib/api";
 import { useCanManageCatalog } from "@/lib/auth/useCanManageCatalog";
 import { cn } from "@/lib/cn";
 import { getStockStatus, type StockStatus } from "@/lib/dashboard";
-import { toViewStatus, useDeleteProduct, useProducts } from "@/lib/queries";
+import {
+  isValidObjectId,
+  toViewStatus,
+  useCategories,
+  useDeleteProduct,
+  useProducts,
+} from "@/lib/queries";
 import { confirmDelete, notifyError, notifySuccess } from "@/lib/sweetAlert";
 import type { ProductDTO } from "@/types/product";
 
@@ -49,13 +56,32 @@ function deleteErrorMessage(error: unknown): string {
 export function ProductsView() {
   const canManage = useCanManageCatalog();
   const productsQuery = useProducts();
+  const categoriesQuery = useCategories();
   const deleteMutation = useDeleteProduct();
   const status = toViewStatus(productsQuery);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const rawCategoryId = searchParams.get("category");
+  const categoryFilter =
+    rawCategoryId && isValidObjectId(rawCategoryId) ? rawCategoryId : null;
+  const selectedCategory = categoriesQuery.data?.find(
+    (category) => category._id === categoryFilter,
+  );
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [dialog, setDialog] = useState<DialogState>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const listSectionRef = useRef<HTMLElement | null>(null);
+
+  const clearCategoryFilter = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("category");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  };
 
   const openCreate = (event: MouseEvent<HTMLButtonElement>) => {
     triggerRef.current = event.currentTarget;
@@ -104,7 +130,9 @@ export function ProductsView() {
       normalizedSearch === "" ||
       product.name.toLowerCase().includes(normalizedSearch) ||
       product.sku.toLowerCase().includes(normalizedSearch);
-    return matchesFilter && matchesSearch;
+    const matchesCategory =
+      categoryFilter === null || product.categoryId === categoryFilter;
+    return matchesFilter && matchesSearch && matchesCategory;
   });
 
   const retry = () => {
@@ -140,6 +168,27 @@ export function ProductsView() {
   } else {
     body = (
       <>
+        {categoryFilter ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-caption text-text-secondary">
+              Filtrando por categoría:
+            </span>
+            <span className="inline-flex h-8 items-center gap-1 rounded-pill bg-primary-soft pl-3 pr-1 text-label text-primary">
+              <span className="max-w-56 truncate">
+                {selectedCategory?.name ?? "Categoría seleccionada"}
+              </span>
+              <button
+                type="button"
+                onClick={clearCategoryFilter}
+                aria-label="Quitar filtro de categoría"
+                className="grid size-7 place-items-center rounded-pill transition-colors duration-150 ease-emphasized hover:bg-primary-soft/70"
+              >
+                <X aria-hidden="true" size={14} />
+              </button>
+            </span>
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-3 desktop:flex-row desktop:items-end desktop:justify-between">
           <div className="w-full desktop:w-72">
             <FormField
@@ -182,7 +231,9 @@ export function ProductsView() {
           <p className="text-body text-text-secondary">
             {normalizedSearch !== ""
               ? "No hay productos que coincidan con la búsqueda."
-              : "No hay productos con ese estado de stock."}
+              : categoryFilter
+                ? "No hay productos en esta categoría."
+                : "No hay productos con ese estado de stock."}
           </p>
         ) : (
           <ProductsList
