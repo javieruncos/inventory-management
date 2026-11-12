@@ -246,7 +246,6 @@ export function useUsers() {
 
 const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/;
 
-/** Valida un ObjectId de 24 hex antes de disparar queries de detalle. */
 export function isValidObjectId(id: string): boolean {
   return OBJECT_ID_PATTERN.test(id);
 }

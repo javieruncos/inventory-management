@@ -37,7 +37,6 @@ export function Sidebar({
         className,
       )}
     >
-      {/* Marca alineada con la altura del topbar (68px) */}
       <div
         className={cn(
           "flex h-[68px] shrink-0 items-center gap-3 border-b border-border px-4",
@@ -104,7 +103,6 @@ export function Sidebar({
                     </span>
                   </Link>
                 ) : (
-                  /* Sección preparada: aún no navega (la vista no existe). */
                   <span
                     title={variant === "rail" ? item.label : undefined}
                     className={cn(itemClasses, "cursor-default")}

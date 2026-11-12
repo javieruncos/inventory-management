@@ -933,7 +933,6 @@ describe("authQueryOptions y mutaciones", () => {
       const client = new QueryClient();
       vi.mocked(logout).mockResolvedValue(null);
 
-      // Precargar datos en caché
       client.setQueryData(queryKeys.auth.me, AUTH_USER);
       client.setQueryData(queryKeys.products.all, [PRODUCT]);
       client.setQueryData(queryKeys.movements.all, [MOVEMENT]);
@@ -951,7 +950,6 @@ describe("authQueryOptions y mutaciones", () => {
 
       await options.onSuccess();
 
-      // Verifica cancelación de consultas pendientes de datos privados
       expect(cancelSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.products.all,
       });
@@ -968,7 +966,6 @@ describe("authQueryOptions y mutaciones", () => {
         queryKey: queryKeys.users.all,
       });
 
-      // Verifica eliminación de datos privados
       expect(removeSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.products.all,
       });
@@ -985,14 +982,12 @@ describe("authQueryOptions y mutaciones", () => {
         queryKey: queryKeys.users.all,
       });
 
-      // Verifica que no quede rastro de los datos privados en caché
       expect(client.getQueryData(queryKeys.products.all)).toBeUndefined();
       expect(client.getQueryData(queryKeys.movements.all)).toBeUndefined();
       expect(client.getQueryData(queryKeys.categories.all)).toBeUndefined();
       expect(client.getQueryData(queryKeys.suppliers.all)).toBeUndefined();
       expect(client.getQueryData(queryKeys.users.all)).toBeUndefined();
 
-      // Verifica que la sesión quede en null explícito
       expect(client.getQueryData(queryKeys.auth.me)).toBeNull();
     });
   });
