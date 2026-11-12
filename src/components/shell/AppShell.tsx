@@ -47,7 +47,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (prefersReducedMotion()) setDrawerMounted(false);
   }, []);
 
-  /* Escape cierra el drawer y bloquea el scroll del fondo mientras está abierto. */
   useEffect(() => {
     if (!drawerOpen) return;
 
@@ -99,7 +98,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [closeDrawer, drawerOpen]);
 
-  /* El foco entra al drawer al abrirlo y vuelve al botón al cerrarlo. */
   useEffect(() => {
     if (drawerOpen) {
       drawerWasOpen.current = true;

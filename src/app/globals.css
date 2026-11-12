@@ -10,12 +10,10 @@
  * + margen mobile 16px (= p-4).
  */
 @theme inline {
-  /* Tipografía principal (DESIGN.md §4.1). */
   --font-sans:
     var(--font-plus-jakarta-sans), system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  /* --- Colors: superficies y bordes (DESIGN.md §5.1, §6) --- */
   --color-canvas: #f6f8fc;
   --color-surface: #ffffff;
   --color-surface-nested: #f8fafc;
@@ -24,7 +22,6 @@
   --color-border-strong: #e2e8f0;
   --color-divider: #f1f5f9;
 
-  /* --- Colors: marca (DESIGN.md §5.1) --- */
   --color-primary: #5b5fc7;
   --color-primary-alt: #4f46e5;
   --color-primary-soft: #eef2ff;
@@ -32,15 +29,13 @@
   --color-success: #10b981;
   --color-neutral: #64748b;
 
-  /* --- Colors: texto (DESIGN.md §5.1) --- */
   --color-text: #0b1c30;
   --color-text-secondary: #64748b;
   --color-text-subtitle: #5e6f87;
   --color-text-muted: #94a3b8;
   --color-secondary-btn-text: #334155;
 
-  /* --- Colors: estados de inventario (DESIGN.md §5.2) ---
-   * Fondos y dots = §5.2 sin cambios. Textos oscurecidos un paso dentro de la
+  /* Fondos y dots = §5.2 sin cambios. Textos oscurecidos un paso dentro de la
    * misma familia de tono para cumplir contraste WCAG AA >= 4.5:1 (DESIGN §20). */
   --color-status-in-bg: #ecfdf5;
   --color-status-in-text: #047857;
@@ -58,14 +53,12 @@
   --color-status-archived-text: #475569;
   --color-status-archived-dot: #94a3b8;
 
-  /* --- Radii (DESIGN.md §7) --- */
   --radius-sm: 4px;
   --radius-control: 10px;
   --radius-nested: 12px;
   --radius-card: 16px;
   --radius-pill: 9999px;
 
-  /* --- Elevation (DESIGN.md §6) --- */
   --shadow-card:
     0 4px 20px -2px rgb(99 102 241 / 0.03),
     0 2px 6px -1px rgb(15 23 42 / 0.04);
@@ -74,7 +67,6 @@
     0 4px 10px -2px rgb(15 23 42 / 0.03);
   --shadow-dialog: 0 25px 50px -12px rgb(15 23 42 / 0.15);
 
-  /* --- Typography (DESIGN.md §4.1) --- */
   --text-display: 32px;
   --text-display--line-height: 40px;
   --text-display--font-weight: 700;
@@ -121,10 +113,8 @@
   --text-label-sm--font-weight: 600;
   --text-label-sm--letter-spacing: 0.02em;
 
-  /* --- Motion (DESIGN.md §19) --- */
   --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* --- Breakpoints (auditoría: desktop >=1200, tablet 768-1199, mobile <768) --- */
   --breakpoint-desktop: 1200px;
 }
 
@@ -137,7 +127,6 @@
     @apply bg-canvas text-text;
   }
 
-  /* Foco visible consistente (DESIGN.md §20, better-accessibility): anillo 2px primary */
   :focus-visible {
     @apply outline-2 outline-primary outline-offset-2;
   }
@@ -252,7 +241,6 @@
   caret-color: var(--login-text-strong);
 }
 
-/* Motion reducido (DESIGN.md §19): sin animaciones ni transiciones decorativas */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
